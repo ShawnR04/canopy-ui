@@ -107,24 +107,53 @@ npx tsc --init
 <kbd>tsconfig.json</kbd>
 ```json
 {
-    "compilerOptions": {
-        // Target modern JavaScript runtime environments (Node 18+)
-        "target": "ES2022",
-        // Use NodeNext module resolution algorithm for native ESM compatibility
-        "module": "NodeNext",
-        "moduleResolution": "NodeNext",
-        // Enable interoperability between CommonJS and ES Modules
-        "esModuleInterop": true,
-        // Turn on strict type checking for robust error detection
-        "strict": true,
-        // Skip type checking of declaration files (.d.ts) for faster compile times
-        "skipLibCheck": true,
-        // Destination directory for compiled JavaScript artifacts
-        "outDir": "./dist"
-    },
-    // Include all TypeScript files in the src directory for compilation
-    "include": ["src/**/*"]
+  // Visit https://aka.ms/tsconfig to read more about this file
+  "compilerOptions": {
+    // File Layout
+    "rootDir": "./src",
+    "outDir": "./dist",
+
+    // Environment Settings
+    // See also https://aka.ms/tsconfig/module
+    "module": "nodenext",
+    "target": "es2022",
+    "moduleResolution": "nodenext",
+    "esModuleInterop": true,
+    "types": [],
+    // For nodejs:
+    // "lib": ["esnext"],
+    // "types": ["node"],
+    // and npm install -D @types/node
+
+    // Other Outputs
+    "sourceMap": true,
+    "declaration": true,
+    "declarationMap": true,
+
+    // Stricter Typechecking Options
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+
+    // Style Options
+    // "noImplicitReturns": true,
+    // "noImplicitOverride": true,
+    // "noUnusedLocals": true,
+    // "noUnusedParameters": true,
+    // "noFallthroughCasesInSwitch": true,
+    // "noPropertyAccessFromIndexSignature": true,
+
+    // Recommended Options
+    "strict": true,
+    "jsx": "react-jsx",
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "noUncheckedSideEffectImports": true,
+    "moduleDetection": "force",
+    "skipLibCheck": true
+  },
+  "include": ["src/**/*"]
 }
+
 ```
 
 ## 3. Toast Component Source Code
