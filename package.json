@@ -30,7 +30,7 @@
   ],
   "author": "Shawn Rimai",
   "license": "MIT",
-  "type": "commonjs",
+  "type": "module",
   "bugs": {
     "url": "https://github.com/ShawnR04/canopy-ui/issues"
   },
