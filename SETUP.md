@@ -49,7 +49,7 @@ npm install -D typescript @types/node @types/fs-extra tsup
 ```
 
 ### 2.2 CLI Configuration (`package.json`) - Documented
-<kbd>package.json</kbd>
+### <kbd>package.json</kbd>
 ```json
 {
   "name": "@marv3l/canopy-ui",
@@ -104,7 +104,7 @@ npm install -D typescript @types/node @types/fs-extra tsup
 ```bash
 npx tsc --init
 ```
-<kbd>tsconfig.json</kbd>
+### <kbd>tsconfig.json</kbd>
 ```json
 {
   // Visit https://aka.ms/tsconfig to read more about this file
@@ -160,7 +160,7 @@ npx tsc --init
 These files live inside the `templates/toast/` directory of the CLI repository and get written into the customer's `components/ui/` directory
 
 ### 3.1 Toast State Management Engine (`templates/toast/use-toast.ts`)
-<kbd>templates/toast/use-toast.ts</kbd>
+### <kbd>templates/toast/use-toast.ts</kbd>
 ```ts
 // Import React to access state hooks and ReactNode type definitions
 import * as React from "react";
@@ -377,7 +377,7 @@ export function useToast() {
 ```
 
 ### 3.2 Toast UI Container and Renderer (`templates/toast/toast.tsx`)
-<kbd>templates/toast/toast.tsx</kbd>
+### <kbd>templates/toast/toast.tsx</kbd>
 ```tsx
 // Import React runtime and component types
 import * as React from "react";
@@ -557,7 +557,7 @@ function ToastElement({
 
 ## 4. CLI Engine & Registry Source Code
 ### 4.1 Component Registry Index (`src/registry.ts`) - Documented
-<kbd>src/registry.ts</kbd>
+### <kbd>src/registry.ts</kbd>
 ```ts
 // Type interface specifying component metadata and dependancy requirements
 export interface ComponentMeta {
@@ -599,7 +599,7 @@ export const REGISTRY: Record<string,ComponentMeta> = {
 ```
 
 ### 4.2 Installer & Copy Engine (`src/commands/add.ts`) - Documented
-<kbd>src/commands/add.ts</kbd>
+### <kbd>src/commands/add.ts</kbd>
 ```ts
 // Native Node.js path utilities
 import path from "node:path";
