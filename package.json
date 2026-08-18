@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "An accessible, themable React UI component library built for fast-moving web applications.",
   "main": "./dist/index.js",
-  "bin" : {
+  "bin": {
     "canopy-ui": "./dist/index.js"
   },
   "files": [
@@ -20,7 +20,14 @@
     "type": "git",
     "url": "git+https://github.com/ShawnR04/canopy-ui.git"
   },
-  "keywords": ["react", "ui", "toast", "shadcn", "components", "cli"],
+  "keywords": [
+    "react",
+    "ui",
+    "toast",
+    "shadcn",
+    "components",
+    "cli"
+  ],
   "author": "Shawn Rimai",
   "license": "MIT",
   "type": "commonjs",
@@ -33,6 +40,7 @@
     "commander": "^15.0.0",
     "execa": "^10.0.1",
     "fs-extra": "^11.4.0",
+    "lucide-react": "^1.31.0",
     "ora": "^9.4.1",
     "picocolors": "^1.1.1"
   },

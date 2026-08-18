@@ -42,7 +42,7 @@ git init
 npm init -y
 
 # Install runtime dependancies needed for CLI terminal interactions
-npm install commander @clack/prompts picocolors ora execa fs-extra
+npm install commander @clack/prompts picocolors ora execa fs-extra lucide-react
 
 # Install developer tools; Typescript compiler and tsup high-speed ERM budler
 npm install -D typescript @types/node @types/fs-extra tsup
@@ -161,6 +161,8 @@ export interface ToastOptions {
         text?: string;
         // Custom border stroke color
         border?: string;
+        //Custom progress bar stroke color
+        progress?: string;
         // Custom icon fill/stroke tint
         icon?: string;
     };
@@ -344,3 +346,6 @@ export function useToast() {
     };
 }
 ```
+
+### 3.2 Toast UI Container and Renderer (`templates/toast/toast.tsx`)
+<kbd>templates/toast/toast.tsx</kbd>

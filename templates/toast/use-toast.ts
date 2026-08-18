@@ -26,6 +26,9 @@ export interface ToastOptions {
         text?: string;
         // Custom border stroke color
         border?: string;
+        //Custom progress bar stroke color
+        // TODO: : Put the progress bar prop here when the time come
+        //progress?: string;
         // Custom icon fill/stroke tint
         icon?: string;
     };
