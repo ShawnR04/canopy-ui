@@ -49,6 +49,7 @@ npm install -D typescript @types/node @types/fs-extra tsup
 ```
 
 ### 2.2 CLI Configuration (`package.json`) - Documented
+<kbd>package.json</kbd>
 ```json
 {
   "name": "@marv3l/canopy-ui",
@@ -94,5 +95,34 @@ npm install -D typescript @types/node @types/fs-extra tsup
     "tsup": "^8.5.1",
     "typescript": "^7.0.2"
   }
+}
+```
+
+### 2.3 Typescript Configuration (`tsconfig.json`) - Documented
+
+#### Creeate the `tsconfig.json` file
+```bash
+npx tsc --init
+```
+<kbd>tsconfig.json</kbd>
+```json
+{
+    "compilerOptions": {
+        // Target modern JavaScript runtime environments (Node 18+)
+        "target": "ES2022",
+        // Use NodeNext module resolution algorithm for native ESM compatibility
+        "module": "NodeNext",
+        "moduleResolution": "NodeNext",
+        // Enable interoperability between CommonJS and ES Modules
+        "esModuleInterop": true,
+        // Turn on strict type checking for robust error detection
+        "strict": true,
+        // Skip type checking of declaration files (.d.ts) for faster compile times
+        "skipLibCheck": true,
+        // Destination directory for compiled JavaScript artifacts
+        "outDir": "./dist"
+    },
+    // Include all TypeScript files in the src directory for compilation
+    "include": ["src/**/*"]
 }
 ```
