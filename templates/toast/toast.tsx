@@ -1,174 +1,185 @@
+"use client";
+
 // Import React runtime and component types
 import * as React from "react";
-// Import semantic sVG icons from lucide-react
-import { CheckCircle2, AlertCircle, AlertTriangle, Info ,X} from "lucide-react";
+// Import semantic SVG icons from lucide-react
+import { CheckCircle2, AlertCircle, AlertTriangle, Info, X } from "lucide-react";
 // Import toast hook and type interfaces
 import { useToast, ToastItem } from "./use-toast";
 
 // Props accepted by the root Toaster container mounted in the root layout
 export interface ToasterProps {
-    // Global lifespan (in milliseconds) for all toasts; defaults to 400ms
-    defaultDuration?: number;
-    //Screen viewport placement position
-    position?: "top-right" | "bottom-right" | "top-center" | "bottom-center" | "top-left" | "bottom-left";
+  // Global lifespan (in milliseconds) for all toasts; defaults to 4000ms
+  defaultDuration?: number;
+  // Screen viewport placement position
+  position?: "top-right" | "bottom-right" | "top-center" | "bottom-center" | "top-left" | "bottom-left";
 }
-// Visual preset configurations defining Tailwind colors and associated icons
-//TODO: Add `progress: string` in the dictionary
-const variantSyles : Record<string, {bg: string; border: string; text: string; icon: any}> = {
-    //Neutral default theme
-    default: {
-        bg: "bg-slate-900",
-        border: "border-slate-800",
-        text: "text-slate-100",
-        //progress: "bg-slate-100",
-        icon: null,
-    },
 
-    //Success preset: Emerald theme with Check icon
-    success: {
-        bg: "bg-emerald-950/90",
-        border: "border-emerald-700/60",
-        text: "text-emerald-200",
-        //progress: "text-emerald-200",
-        icon: CheckCircle2
-    },
-
-    // Error preset: Rose theme with AlertCircle
-    error: {
-        bg: "bg-rose-950/90",
-        border: "border-rose-700/60",
-        text: "text-rose-200",
-        //progress: "text-rose-200",
-        icon: AlertCircle
-    },
-
-    //Warning preset: Amber theme with AlertTriangle icon
-    warning: {
-        bg: "bg-amber-950/90",
-        border: "border-amber-700/60",
-        text: "text-amber-200",
-        //progress: "text-amber-200",
-        icon: AlertTriangle
-    },
-
-    //Informational preset: Sky blue theme with Info iocn
-    info: {
-        bg: "bg-sky-950/90",
-        border: "border-sky-700/60",
-        text: "text-sky-200",
-        //progress: "text-sky-200",
-        icon: Info
-    },
-}
+// Visual preset configurations mapped to your semantic theme tokens
+const variantStyles: Record<
+  string,
+  { bg: string; border: string; text: string; progress: string; icon: any }
+> = {
+  default: {
+    bg: "bg-card",
+    border: "border-border",
+    text: "text-card-foreground",
+    progress: "bg-foreground/20",
+    icon: null,
+  },
+  success: {
+    bg: "bg-success-bg",
+    border: "border-success/40",
+    text: "text-success",
+    progress: "bg-success",
+    icon: CheckCircle2,
+  },
+  error: {
+    bg: "bg-destructive/10",
+    border: "border-destructive/30",
+    text: "text-destructive",
+    progress: "bg-destructive",
+    icon: AlertCircle,
+  },
+  warning: {
+    bg: "bg-warning-bg",
+    border: "border-warning/40",
+    text: "text-warning",
+    progress: "bg-warning",
+    icon: AlertTriangle,
+  },
+  info: {
+    bg: "bg-accent",
+    border: "border-primary/30",
+    text: "text-accent-foreground",
+    progress: "bg-primary",
+    icon: Info,
+  },
+};
 
 // Root Toaster Component placed into layout.tsx
-export function Toaster({ defaultDuration = 400, position = "top-center"}: ToasterProps){
-    // Extract real-time toast arary and dismiss helper from custom hook
-    const { toasts, dismiss } = useToast();
+export function Toaster({ defaultDuration = 4000, position = "top-center" }: ToasterProps) {
+  const { toasts, dismiss } = useToast();
 
-    // Map position prop to Tailwind absolute positioning classes
-    const positionClasses = {
-        "top-right" : "top-4 right-4 items-end",
-        "top-left" : "top-4 left-4 items-start",
-        "bottom-right" : "bottom-4 right-4 items-end",
-        "bottom-left" : "bottom-4 left-4 items-start",
-        "top-center" : "top-4 left-1/2 -translate-x-1/2 items-center",
-        "bottom-center" : "bottom-4 left-1/2 -translate-x-1/2 items-center",
-    }[position];
+  const positionClasses = {
+    "top-right": "top-4 right-4 items-end",
+    "top-left": "top-4 left-4 items-start",
+    "bottom-right": "bottom-4 right-4 items-end",
+    "bottom-left": "bottom-4 left-4 items-start",
+    "top-center": "top-4 left-1/2 -translate-x-1/2 items-center",
+    "bottom-center": "bottom-4 left-1/2 -translate-x-1/2 items-center",
+  }[position];
 
-    return (
-        // Fixed viewport container ; pointer-events-none ensures it doesn't block background clicks
-        <div className={`fixed z-50 pointer-none flex flex-col gap-2 p-4 w-full max-w-sm ${positionClasses}`}>
-            {/* Map through active toast state and render atomic  toast items */}
-            {toasts.map((item) => (
-                <ToastElement
-                    key={item.id}
-                    toast={item}
-                    defaultDuration={defaultDuration}
-                    onDismiss={() => dismiss(item.id)}
-                />
-            ))}
-        </div>
-    );
+  return (
+    <>
+      <style>{`
+        @keyframes toast-progress {
+          from {
+            transform: scaleX(1);
+          }
+          to {
+            transform: scaleX(0);
+          }
+        }
+      `}</style>
+
+      <div className={`fixed z-50 pointer-events-none flex flex-col gap-2 p-4 w-full max-w-sm ${positionClasses}`}>
+        {toasts.map((item) => (
+          <ToastElement
+            key={item.id}
+            toast={item}
+            defaultDuration={defaultDuration}
+            onDismiss={() => dismiss(item.id)}
+          />
+        ))}
+      </div>
+    </>
+  );
 }
 
 // Atomic Toast Card Component
 function ToastElement({
-    toast,
-    defaultDuration,
-    onDismiss,
+  toast,
+  defaultDuration,
+  onDismiss,
 }: {
-    toast: ToastItem;
-    defaultDuration: number;
-    onDismiss: () => void;
+  toast: ToastItem;
+  defaultDuration: number;
+  onDismiss: () => void;
 }) {
-    // Priority: toast.duration > layout defaultDuration
-    const duration = toast.duration ?? defaultDuration;
+  const duration = toast.duration ?? defaultDuration;
 
-    // Set up auto-dismiss timer on component mount
-    React.useEffect(() => {
-        // If duration is set to <= 0, toast stays on screen indefinitely until manual dismissal
-        if (duration <= 0) return;
-        // Schedule dismissal
-        const timer = setTimeout(() => {
-            onDismiss();
-        }, duration);
-        // Clean up timer when toast unmounts or duration changes
-        return () => clearTimeout(timer);
-    }, [duration, onDismiss]);
+  React.useEffect(() => {
+    if (duration <= 0) return;
+    const timer = setTimeout(() => {
+      onDismiss();
+    }, duration);
+    return () => clearTimeout(timer);
+  }, [duration, onDismiss]);
 
-    // Resolve visual preset or fall back to default
-    const variant = toast.variant || "default"
-    const defaultStyle = variantSyles[variant] || variantSyles.default;
-    const IconComponent = defaultStyle.icon;
+  const variant = toast.variant || "default";
+  const defaultStyle = variantStyles[variant] || variantStyles.default;
+  const IconComponent = defaultStyle.icon;
 
-    // Inline style overrides for user-specified dynamic colors
-    const customInlineStyle: React.CSSProperties ={
-        backgroundColor: toast.customColor?.bg,
-        borderColor: toast.customColor?.border,
-        //progress: toast.customColor?.progress,
-        color: toast.customColor?.text,
-    };
+  // 1. Only build inline styles for values that are explicitly provided
+  const customInlineStyle: React.CSSProperties = {};
+  if (toast.customColor?.bg) customInlineStyle.backgroundColor = toast.customColor.bg;
+  if (toast.customColor?.border) customInlineStyle.borderColor = toast.customColor.border;
+  if (toast.customColor?.text) customInlineStyle.color = toast.customColor.text;
 
-    return (
-        // Card container with pointer-events-none to re-enable interaction on the toast itself
-        <div 
-            style={customInlineStyle}
-            className={` pointer-events-auto flex items-start gap-3 w-full p-4 rounded-lg border shadow-lg
-                transition-all duration-200 backdrop-blur-sm 
-                ${!toast.customColor?.bg ? defaultStyle.bg : ""} 
-                ${!toast.customColor?.border ? defaultStyle.border : ""} 
-                ${!toast.customColor?.text ? defaultStyle.text : ""}
-                ${toast.className || ""}
-            `}
-        >
-            {/* Render icon if preset defines one */}
-            {IconComponent && (
-                <IconComponent
-                    className="w-5 h-5 mt-0.5 shrink-0"
-                    style={{ color: toast.customColor?.icon}}
-                />
-            )}
-            {/* Toast Content Area */}
-            <div className="flex-1 text-sm space-y-1">
-                {/* Title rendering */}
-                {toast.title && <div className="font-semibold">{toast.title}</div>}
-                {/* Description rendering */}
-                {toast.description && (
-                    <div className="opacity-90 leading-relaxed text-xs">
-                        {toast.description}
-                    </div>
-                )}
-                {/* Action button/node rendering */}
-                {toast.action && <div className="pt-1">{toast.action}</div>}
-            </div>
-            {/* Close button */}
-            <button 
-                onClick={onDismiss}
-                className="p-1 rounded-md opacity-70 hover:opacity-100 hover:bg-slate-800/40 transition-colors"
-            >
-                <X className="w-4 h-4" />
-            </button>
-        </div>
-    );
+  // 2. Prevent default Tailwind classes from overriding user custom classes or inline styles
+  const userHasBg = Boolean(toast.customColor?.bg || toast.className?.match(/(?:^|\s)bg-/));
+  const userHasBorder = Boolean(toast.customColor?.border || toast.className?.match(/(?:^|\s)border-/));
+  const userHasText = Boolean(toast.customColor?.text || toast.className?.match(/(?:^|\s)text-/));
+
+  return (
+    <div
+      style={customInlineStyle}
+      className={`pointer-events-auto relative overflow-hidden flex items-start gap-3 w-full p-4 rounded-[var(--radius-lg,0.625rem)] border shadow-lg transition-all duration-200 backdrop-blur-sm ${
+        !userHasBg ? defaultStyle.bg : ""
+      } ${!userHasBorder ? defaultStyle.border : ""} ${
+        !userHasText ? defaultStyle.text : ""
+      } ${toast.className || ""}`}
+    >
+      {/* Render icon if preset defines one */}
+      {IconComponent && (
+        <IconComponent
+          className="w-5 h-5 mt-0.5 shrink-0"
+          style={{ color: toast.customColor?.icon }}
+        />
+      )}
+
+      {/* Toast Content Area */}
+      <div className="flex-1 text-sm space-y-1">
+        {toast.title && <div className="font-semibold leading-tight">{toast.title}</div>}
+        {toast.description && (
+          <div className="opacity-90 leading-relaxed text-xs">
+            {toast.description}
+          </div>
+        )}
+        {toast.action && <div className="pt-1">{toast.action}</div>}
+      </div>
+
+      {/* Close button */}
+      <button
+        onClick={onDismiss}
+        className="p-1 rounded-md opacity-70 hover:opacity-100 hover:bg-foreground/10 transition-colors"
+      >
+        <X className="w-4 h-4" />
+      </button>
+
+      {/* Animated Lifespan Progress Bar */}
+      {duration > 0 && (
+        <div
+          className={`absolute bottom-0 left-0 right-0 h-1 origin-left ${
+            !toast.customColor?.progress ? defaultStyle.progress : ""
+          }`}
+          style={{
+            backgroundColor: toast.customColor?.progress,
+            animation: `toast-progress ${duration}ms linear forwards`,
+          }}
+        />
+      )}
+    </div>
+  );
 }

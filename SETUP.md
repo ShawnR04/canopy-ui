@@ -187,217 +187,190 @@ These files live inside the `templates/toast/` directory of the CLI repository a
 ### 3.1 Toast State Management Engine (`templates/toast/use-toast.ts`)
 ### <kbd>templates/toast/use-toast.ts</kbd>
 ```ts
-// Import React to access state hooks and ReactNode type definitions
+"use client";
+
+// Import React runtime and component types
 import * as React from "react";
+// Import semantic SVG icons from lucide-react
+import { CheckCircle2, AlertCircle, AlertTriangle, Info, X } from "lucide-react";
+// Import toast hook and type interfaces
+import { useToast, ToastItem } from "./use-toast";
 
-// Define the supported visual preset types for toast notifications
-export type ToastVariant = "default" | "success" | "error" | "warning" | "info" | "custom";
-
-// Interface defining all configurable parameters when triggering a toast notification
-export interface ToastOptions {
-    // Unique identifier for toast; auto-generated if omitted
-    id?: string;
-    // Primary header text or React component
-    title?: React.ReactNode;
-    // Secondary descriptive message or details
-    description?: React.ReactNode;
-    // Optional action button or interactive element
-    action?: React.ReactNode;
-    // Visual style preset (success, error, warning, info, default, custom)
-    variant?: ToastVariant;
-    // Individual lifespan in milliseconds; overrides the global layout default
-    duration?: number;
-    // User-defined custom styling parameters for dynamic themes
-    customColor?: {
-        // Custom CSS background color (HEX, RGB, or HSL)
-        bg?: string;
-        // Custom text color
-        text?: string;
-        // Custom border stroke color
-        border?: string;
-        //Custom progress bar stroke color
-        progress?: string;
-        // Custom icon fill/stroke tint
-        icon?: string;
-    };
-    // Additional Tailwind or custom CSS classes applied to toast container
-    className?: string;
+// Props accepted by the root Toaster container mounted in the root layout
+export interface ToasterProps {
+  // Global lifespan (in milliseconds) for all toasts; defaults to 4000ms
+  defaultDuration?: number;
+  // Screen viewport placement position
+  position?: "top-right" | "bottom-right" | "top-center" | "bottom-center" | "top-left" | "bottom-left";
 }
 
-// Internal representation of an active toast item containing open state
-export interface ToastItem extends ToastOptions {
-    // Guaranteed string ID for DOM key mapping
-    id: string;
-    // Boolean flag controlling entrance and exit animations
-    open: boolean;
-}
-
-// Maximum number of visible toast cards on screen simultaneously
-const TOAST_LIMIT = 5;
-// Delay before removed toasts are completely purged from memory (allows exit transition)
-const TOAST_REMOVE_DELAY = 1000;
-
-// Discriminated union type representing all possible reducer actions
-type Action = 
-    // Adds a newly triggered toast to state
-    | { type: "ADD_TOAST"; toast: ToastItem }
-    // Modifies properties of an existing active toast
-    | { type: "UPDATE_TOAST"; toast: Partial<ToastItem> }
-    // Initiates dismiss sequence (triggers exit animation)
-    | { type: "DISMISS_TOAST"; toastId?: string }
-    // Purges toast object from memory after exit animation finishes
-    | { type: "REMOVE_TOAST"; toastId?: string };
-
-// Structure of global toast memory state
-interface State {
-    toasts: ToastItem[];
-}
-
-// Monotonically increasing counter for collision-free ID generation
-let count = 0;
-
-// Generates unique string identifiers for toast items
-function genId(): string {
-    count = (count + 1) % Number.MAX_SAFE_INTEGER;
-    return count.toString();
-}
-
-// Map tracking active removal timers to prevent duplicate schedule queues
-const toastTimeouts = new Map<string, ReturnType<typeof setTimeout>>();
-
-// Schedule the hard removal of a dismissed toast after its exit animation completes
-const addToRemoveQueue = (toastId: string) => {
-    // If a timeout is already scheduled for this ID, skip to avoid duplicates
-    if (toastTimeouts.has(toastId)) return;
-
-    // Schedule state dispatch after delay
-    const timeout = setTimeout(() => {
-        // Clean up timeout reference from tracking map
-        toastTimeouts.delete(toastId);
-        // Dispatch removal action to purge from state
-        dispatch({ type: "REMOVE_TOAST", toastId });
-    }, TOAST_REMOVE_DELAY);
-
-    // Store reference in tracking map
-    toastTimeouts.set(toastId, timeout);
+// Visual preset configurations mapped to your semantic theme tokens
+const variantStyles: Record<
+  string,
+  { bg: string; border: string; text: string; progress: string; icon: any }
+> = {
+  default: {
+    bg: "bg-card",
+    border: "border-border",
+    text: "text-card-foreground",
+    progress: "bg-foreground/20",
+    icon: null,
+  },
+  success: {
+    bg: "bg-success-bg",
+    border: "border-success/40",
+    text: "text-success",
+    progress: "bg-success",
+    icon: CheckCircle2,
+  },
+  error: {
+    bg: "bg-destructive/10",
+    border: "border-destructive/30",
+    text: "text-destructive",
+    progress: "bg-destructive",
+    icon: AlertCircle,
+  },
+  warning: {
+    bg: "bg-warning-bg",
+    border: "border-warning/40",
+    text: "text-warning",
+    progress: "bg-warning",
+    icon: AlertTriangle,
+  },
+  info: {
+    bg: "bg-accent",
+    border: "border-primary/30",
+    text: "text-accent-foreground",
+    progress: "bg-primary",
+    icon: Info,
+  },
 };
 
-// Pure reducer function handling toast state transitions
-export const reducer = (state: State, action: Action): State => {
-    switch (action.type) {
-        case "ADD_TOAST":
-            return {
-                ...state,
-                // Prepend new toast and enforce maximum visible limit
-                toasts: [action.toast, ...state.toasts].slice(0, TOAST_LIMIT),
-            };
+// Root Toaster Component placed into layout.tsx
+export function Toaster({ defaultDuration = 4000, position = "top-center" }: ToasterProps) {
+  const { toasts, dismiss } = useToast();
 
-        case "UPDATE_TOAST":
-            return {
-                ...state,
-                // Map through toasts and merge updated properties onto target ID
-                toasts: state.toasts.map((t) =>
-                    t.id === action.toast.id ? { ...t, ...action.toast } : t
-                ),
-            };
+  const positionClasses = {
+    "top-right": "top-4 right-4 items-end",
+    "top-left": "top-4 left-4 items-start",
+    "bottom-right": "bottom-4 right-4 items-end",
+    "bottom-left": "bottom-4 left-4 items-start",
+    "top-center": "top-4 left-1/2 -translate-x-1/2 items-center",
+    "bottom-center": "bottom-4 left-1/2 -translate-x-1/2 items-center",
+  }[position];
 
-        case "DISMISS_TOAST": {
-            const { toastId } = action;
-
-            // If a specific ID is provided, schedule removal for only that toast
-            if (toastId) {
-                addToRemoveQueue(toastId);
-            } else {
-                // Otherwise schedule removal for all currently open toasts
-                state.toasts.forEach((toast) => addToRemoveQueue(toast.id));
-            }
-
-            return {
-                ...state,
-                // Mark target toasts as closed to trigger CSS fade-out
-                toasts: state.toasts.map((t) =>
-                    t.id === toastId || toastId === undefined ? { ...t, open: false } : t
-                ),
-            };
+  return (
+    <>
+      <style>{`
+        @keyframes toast-progress {
+          from {
+            transform: scaleX(1);
+          }
+          to {
+            transform: scaleX(0);
+          }
         }
+      `}</style>
 
-        case "REMOVE_TOAST":
-            // Clear entire array if no specific ID passed
-            if (action.toastId === undefined) return { ...state, toasts: [] };
-
-            return {
-                ...state,
-                // Filter out target toast from state memory
-                toasts: state.toasts.filter((t) => t.id !== action.toastId),
-            };
-
-        default:
-            return state;
-    }
-};
-
-// Array of subscriber callbacks implementing the Observer pattern
-const listeners: Array<(state: State) => void> = [];
-
-// Singleton state variable preserving toast state across entire application
-let memoryState: State = { toasts: [] };
-
-// Dispatches actions to state and notifies all registered React hook subscribers
-function dispatch(action: Action) {
-    // Update in-memory singleton state
-    memoryState = reducer(memoryState, action);
-    // Notify every mounted React component listener
-    listeners.forEach((listener) => listener(memoryState));
+      <div className={`fixed z-50 pointer-events-none flex flex-col gap-2 p-4 w-full max-w-sm ${positionClasses}`}>
+        {toasts.map((item) => (
+          <ToastElement
+            key={item.id}
+            toast={item}
+            defaultDuration={defaultDuration}
+            onDismiss={() => dismiss(item.id)}
+          />
+        ))}
+      </div>
+    </>
+  );
 }
 
-// Imperative toast function callable from anywhere (inside or outside React lifecycle)
-export function toast(props: ToastOptions) {
-    // Use provided ID or generate a new unique identifier
-    const id = props.id || genId();
+// Atomic Toast Card Component
+function ToastElement({
+  toast,
+  defaultDuration,
+  onDismiss,
+}: {
+  toast: ToastItem;
+  defaultDuration: number;
+  onDismiss: () => void;
+}) {
+  const duration = toast.duration ?? defaultDuration;
 
-    // Helper to dynamically update this specific toast
-    const update = (updatedProps: ToastOptions) => 
-        dispatch({ type: "UPDATE_TOAST", toast: { ...updatedProps, id } });
+  React.useEffect(() => {
+    if (duration <= 0) return;
+    const timer = setTimeout(() => {
+      onDismiss();
+    }, duration);
+    return () => clearTimeout(timer);
+  }, [duration, onDismiss]);
 
-    // Helper to dismiss this specific toast
-    const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id });
+  const variant = toast.variant || "default";
+  const defaultStyle = variantStyles[variant] || variantStyles.default;
+  const IconComponent = defaultStyle.icon;
 
-    // Dispatch action to push toast into visible queue
-    dispatch({
-        type: "ADD_TOAST",
-        toast: {
-            ...props,
-            id,
-            open: true,
-        },
-    });
+  // 1. Only build inline styles for values that are explicitly provided
+  const customInlineStyle: React.CSSProperties = {};
+  if (toast.customColor?.bg) customInlineStyle.backgroundColor = toast.customColor.bg;
+  if (toast.customColor?.border) customInlineStyle.borderColor = toast.customColor.border;
+  if (toast.customColor?.text) customInlineStyle.color = toast.customColor.text;
 
-    // Return control object allowing caller to dismiss or update toast programmatically
-    return { id, dismiss, update };
-}
+  // 2. Prevent default Tailwind classes from overriding user custom classes or inline styles
+  const userHasBg = Boolean(toast.customColor?.bg || toast.className?.match(/(?:^|\s)bg-/));
+  const userHasBorder = Boolean(toast.customColor?.border || toast.className?.match(/(?:^|\s)border-/));
+  const userHasText = Boolean(toast.customColor?.text || toast.className?.match(/(?:^|\s)text-/));
 
-// Custom React hook subscribing components to real-time toast updates
-export function useToast() {
-    // Local state synced with singleton memory state
-    const [state, setState] = React.useState<State>(memoryState);
+  return (
+    <div
+      style={customInlineStyle}
+      className={`pointer-events-auto relative overflow-hidden flex items-start gap-3 w-full p-4 rounded-[var(--radius-lg,0.625rem)] border shadow-lg transition-all duration-200 backdrop-blur-sm ${
+        !userHasBg ? defaultStyle.bg : ""
+      } ${!userHasBorder ? defaultStyle.border : ""} ${
+        !userHasText ? defaultStyle.text : ""
+      } ${toast.className || ""}`}
+    >
+      {/* Render icon if preset defines one */}
+      {IconComponent && (
+        <IconComponent
+          className="w-5 h-5 mt-0.5 shrink-0"
+          style={{ color: toast.customColor?.icon }}
+        />
+      )}
 
-    // Register listener on mount; unregister on unmount
-    React.useEffect(() => {
-        listeners.push(setState);
-        return () => {
-            const index = listeners.indexOf(setState);
-            if (index > -1) {
-                listeners.splice(index, 1);
-            }
-        };
-    }, []); // Empty array ensures registration only happens on mount/unmount
+      {/* Toast Content Area */}
+      <div className="flex-1 text-sm space-y-1">
+        {toast.title && <div className="font-semibold leading-tight">{toast.title}</div>}
+        {toast.description && (
+          <div className="opacity-90 leading-relaxed text-xs">
+            {toast.description}
+          </div>
+        )}
+        {toast.action && <div className="pt-1">{toast.action}</div>}
+      </div>
 
-    // Expose current state, trigger function, and dismiss helper
-    return {
-        ...state,
-        toast,
-        dismiss: (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId }),
-    };
+      {/* Close button */}
+      <button
+        onClick={onDismiss}
+        className="p-1 rounded-md opacity-70 hover:opacity-100 hover:bg-foreground/10 transition-colors"
+      >
+        <X className="w-4 h-4" />
+      </button>
+
+      {/* Animated Lifespan Progress Bar */}
+      {duration > 0 && (
+        <div
+          className={`absolute bottom-0 left-0 right-0 h-1 origin-left ${
+            !toast.customColor?.progress ? defaultStyle.progress : ""
+          }`}
+          style={{
+            backgroundColor: toast.customColor?.progress,
+            animation: `toast-progress ${duration}ms linear forwards`,
+          }}
+        />
+      )}
+    </div>
+  );
 }
 ```
 
@@ -787,41 +760,80 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 ### <kbd>app/page.tsx</kbd>
 ```tsx
 "use client";
+
 import { toast } from "@/components/ui/use-toast";
+
 export default function Page() {
-    return (
-        <div className="p-8 space-x-4">
-            {/* Example 1: Built-in Success Preset */}
-            <button
-                onClick={() =>
-                    toast({
-                        variant: "success",
-                        title: "Changes Saved",
-                        description: "Your preferences were updated successfully.",
-                    })
-                }
-            >
-            Success Toast
-            </button>
-            {/* Example 2: Fully Custom User Color with Custom Override Duration */}
-            <button
-                onClick={() =>
-                    toast({
-                        title: "Pro Subscription Unlocked",
-                        description: "Welcome to VIP perks and custom styling.",
-                        duration: 8000, // Custom duration overriding root layout
-                        customColor: {
-                            bg: "#3b0764", // Dark purple background
-                            border: "#9333ea", // Vibrant amethyst border
-                            text: "#f3e8ff", // Lavender text
-                        },
-                    })
-                }
-            >
-                Custom Purple Toast
-            </button>
-        </div>
-    );
+  return (
+    <div className="p-8 flex flex-wrap gap-4 items-center min-h-screen bg-background text-foreground">
+      {/* 1. Success Variant */}
+      <button
+        className="px-4 py-2 text-sm font-medium rounded-md bg-success text-success-foreground hover:opacity-90 transition-opacity"
+        onClick={() =>
+          toast({
+            variant: "success",
+            title: "Changes Saved",
+            description: "Your preferences were updated successfully.",
+          })
+        }
+      >
+        Success Toast
+      </button>
+
+      {/* 2. Error / Destructive Variant */}
+      <button
+        className="px-4 py-2 text-sm font-medium rounded-md bg-destructive text-destructive-foreground hover:opacity-90 transition-opacity"
+        onClick={() =>
+          toast({
+            variant: "error",
+            title: "Action Failed",
+            description: "Could not connect to the remote server.",
+          })
+        }
+      >
+        Error Toast
+      </button>
+
+      {/* 3. Custom CSS Variables & Progress Bar */}
+      <button
+        className="px-4 py-2 text-sm font-medium rounded-md bg-secondary text-secondary-foreground hover:opacity-90 transition-opacity"
+        onClick={() =>
+          toast({
+            title: "Pro Subscription Unlocked",
+            description: "Welcome to VIP perks and custom styling.",
+            duration: 5000,
+            customColor: {
+              bg: "var(--card)",
+              border: "var(--primary)",
+              text: "var(--card-foreground)",
+              icon: "var(--primary)",
+              progress: "var(--primary)",
+            },
+          })
+        }
+      >
+        Custom Token Toast
+      </button>
+
+      {/* 4. Direct ClassName Override */}
+      <button
+        className="px-4 py-2 text-sm font-medium rounded-md border border-border text-foreground hover:bg-muted transition-colors"
+        onClick={() =>
+          toast({
+            title: "Tailwind Classes Applied",
+            description: "Styled with direct className overrides.",
+            duration: 3500,
+            customColor: {
+              progress: "var(--destructive)",
+            },
+            className: "border-destructive/40 text-primary bg-card",
+          })
+        }
+      >
+        ClassName Override Toast
+      </button>
+    </div>
+  );
 }
 
 ```

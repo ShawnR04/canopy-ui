@@ -1,3 +1,5 @@
+"use client"
+
 // Import React to access state hooks and ReactNode type definitions
 import * as React from "react";
 
@@ -27,8 +29,7 @@ export interface ToastOptions {
         // Custom border stroke color
         border?: string;
         //Custom progress bar stroke color
-        // TODO: : Put the progress bar prop here when the time come
-        //progress?: string;
+        progress?: string;
         // Custom icon fill/stroke tint
         icon?: string;
     };
