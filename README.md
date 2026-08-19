@@ -1,338 +1,261 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>Canopy UI - Technical Spec & Cheat Sheet</title>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700;800&display=swap');
+# Canopy UI
 
-    @page {
-      size: A4;
-      margin: 12mm 15mm 15mm 15mm;
-    }
+> A modern, copy-and-paste CLI for adding customizable UI components directly to React and Next.js codebases.
 
-    * {
-      box-sizing: border-box;
-      -webkit-print-color-adjust: exact !important;
-      print-color-adjust: exact !important;
-    }
+Canopy UI installs component source code into your project, giving you full ownership over the markup, styles, behavior, and design tokens. Customize components as much as you need—without being locked into a hosted UI library.
 
-    body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-      color: #0f172a;
-      background-color: #ffffff;
-      line-height: 1.55;
-      font-size: 13px;
-      margin: 0;
-      padding: 0;
-    }
+## Quick Start
 
-    /* Top Brand Banner */
-    .header-card {
-      background: linear-gradient(135deg, #090d16 0%, #1e1b4b 50%, #311042 100%);
-      border-radius: 12px;
-      padding: 24px;
-      color: #ffffff;
-      margin-bottom: 20px;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-    }
+Add a component with one command:
 
-    .badge {
-      display: inline-block;
-      font-family: 'Fira Code', monospace;
-      font-size: 11px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      background: rgba(99, 102, 241, 0.25);
-      border: 1px solid rgba(129, 140, 248, 0.4);
-      color: #c7d2fe;
-      padding: 3px 10px;
-      border-radius: 9999px;
-      margin-bottom: 10px;
-    }
+```bash
+npx canopy-ui add toast
+```
 
-    .header-card h1 {
-      font-size: 26px;
-      font-weight: 800;
-      letter-spacing: -0.03em;
-      margin: 0 0 6px 0;
-      color: #f8fafc;
-    }
+Run the command without a component name to open an interactive multi-select prompt:
 
-    .header-card p {
-      margin: 0;
-      font-size: 13.5px;
-      color: #94a3b8;
-      font-weight: 400;
-    }
+```bash
+npx canopy-ui add
+```
 
-    /* Section Typography */
-    h2 {
-      font-size: 15px;
-      font-weight: 700;
-      color: #0f172a;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      margin: 20px 0 10px 0;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      border-bottom: 1.5px solid #e2e8f0;
-      padding-bottom: 6px;
-      page-break-after: avoid;
-    }
+---
 
-    h3 {
-      font-size: 13.5px;
-      font-weight: 600;
-      color: #334155;
-      margin: 14px 0 6px 0;
-      page-break-after: avoid;
-    }
+## Components
 
-    /* Command & Terminal Pill */
-    .cli-box {
-      background: #090d16;
-      border: 1px solid #1e293b;
-      border-radius: 8px;
-      padding: 10px 14px;
-      color: #38bdf8;
-      font-family: 'Fira Code', monospace;
-      font-size: 12px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin: 8px 0;
-    }
+### Toast
 
-    .cli-box span.prompt {
-      color: #64748b;
-      user-select: none;
-    }
+A customizable, animated notification system with:
 
-    /* Code Snippet Blocks */
-    pre {
-      background: #0b0f19;
-      color: #e2e8f0;
-      font-family: 'Fira Code', monospace;
-      font-size: 11.5px;
-      line-height: 1.6;
-      padding: 14px 16px;
-      border-radius: 8px;
-      border: 1px solid #1e293b;
-      margin: 8px 0 12px 0;
-      overflow-x: hidden;
-      white-space: pre-wrap;
-      page-break-inside: avoid;
-    }
+- Built-in `success` and `error` variants
+- Configurable global default duration
+- Configurable screen position
+- Per-toast duration overrides
+- Custom colors using hex values, CSS variables, or design tokens
+- Progress-bar color controls
+- Direct Tailwind `className` overrides
 
-    .token-keyword { color: #f43f5e; font-weight: 500; }
-    .token-func { color: #38bdf8; }
-    .token-str { color: #34d399; }
-    .token-attr { color: #fbbf24; }
-    .token-comment { color: #64748b; font-style: italic; }
+## Installation
 
-    /* Tables */
-    table {
-      width: 100%;
-      border-collapse: separate;
-      border-spacing: 0;
-      margin: 12px 0;
-      font-size: 12px;
-      border: 1px solid #e2e8f0;
-      border-radius: 8px;
-      overflow: hidden;
-      page-break-inside: avoid;
-    }
+Install the Toast component into your project:
 
-    th {
-      background-color: #f8fafc;
-      color: #475569;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.03em;
-      font-size: 10.5px;
-      padding: 8px 12px;
-      border-bottom: 1px solid #e2e8f0;
-      border-right: 1px solid #e2e8f0;
-      text-align: left;
-    }
+```bash
+npx canopy-ui add toast
+```
 
-    th:last-child { border-right: none; }
+The component is added to your local UI directory, typically under:
 
-    td {
-      padding: 8px 12px;
-      border-bottom: 1px solid #e2e8f0;
-      border-right: 1px solid #e2e8f0;
-      color: #334155;
-      vertical-align: middle;
-    }
+```text
+components/ui/toast.tsx
+components/ui/use-toast.ts
+```
 
-    td:last-child { border-right: none; }
-    tr:last-child td { border-bottom: none; }
-    tr:nth-child(even) td { background-color: #fafafa; }
+> The exact generated paths may depend on your project's configured import aliases.
 
-    code {
-      font-family: 'Fira Code', monospace;
-      font-size: 11px;
-      background: #f1f5f9;
-      color: #0f172a;
-      padding: 2px 5px;
-      border-radius: 4px;
-      border: 1px solid #e2e8f0;
-    }
+---
 
-    /* Grid Layout for Features */
-    .grid-2 {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      margin: 10px 0;
-    }
+## Setup
 
-    .feature-card {
-      border: 1px solid #e2e8f0;
-      border-radius: 8px;
-      padding: 12px 14px;
-      background: #ffffff;
-      border-left: 3.5px solid #6366f1;
-    }
+Mount `Toaster` once in your root `app/layout.tsx`. This provides the toast viewport for all routes in your application.
 
-    .feature-card strong {
-      display: block;
-      color: #0f172a;
-      font-size: 12.5px;
-      margin-bottom: 3px;
-    }
+```tsx
+import type { Metadata } from "next";
+import { Geist, Geist_Mono } from "next/font/google";
 
-    .feature-card p {
-      margin: 0;
-      font-size: 11.5px;
-      color: #64748b;
-    }
+import "./globals.css";
+import { Toaster } from "@/components/ui/toast";
 
-    /* Footer */
-    .footer {
-      margin-top: 24px;
-      padding-top: 10px;
-      border-top: 1px solid #e2e8f0;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 11px;
-      color: #94a3b8;
-      page-break-inside: avoid;
-    }
-  </style>
-</head>
-<body>
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+});
 
-  <div class="header-card">
-    <div class="badge">Component Reference v1.0.0</div>
-    <h1>Canopy UI & Toast System</h1>
-    <p>Independent copy-paste CLI & notification architecture for modern React & Next.js applications.</p>
-  </div>
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
 
-  <h2>⚡ Quick Setup</h2>
-  <p style="margin: 4px 0 8px 0; color: #475569;">Run the CLI command to download the components directly into your codebase:</p>
-  <div class="cli-box">
-    <span class="prompt">$</span>
-    <span>npx canopy-ui add toast</span>
-  </div>
+export const metadata: Metadata = {
+  title: "My App",
+  description: "My application",
+};
 
-  <h2>📦 Component Highlights</h2>
-  <div class="grid-2">
-    <div class="feature-card">
-      <strong>Zero Runtime CSS Config</strong>
-      <p>Self-contained `@keyframes` injection allows the progress bar to animate seamlessly without modifying external stylesheets.</p>
-    </div>
-    <div class="feature-card" style="border-left-color: #10b981;">
-      <strong>Observer Hook Architecture</strong>
-      <p>Decoupled singleton state machine callable anywhere—inside React components or external async functions.</p>
-    </div>
-  </div>
-
-  <h2>🚀 Implementation Blueprint</h2>
-
-  <h3>1. Global Provider (<code>app/layout.tsx</code>)</h3>
-  <pre><code><span class="token-keyword">import</span> { Toaster } <span class="token-keyword">from</span> <span class="token-str">"@/components/ui/toast"</span>;
-
-<span class="token-keyword">export default function</span> <span class="token-func">RootLayout</span>({ children }: { children: React.ReactNode }) {
-  <span class="token-keyword">return</span> (
-    <span class="token-keyword">&lt;</span><span class="token-attr">html</span> <span class="token-attr">lang</span>=<span class="token-str">"en"</span><span class="token-keyword">&gt;</span>
-      <span class="token-keyword">&lt;</span><span class="token-attr">body</span><span class="token-keyword">&gt;</span>
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html
+      lang="en"
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+    >
+      <body className="flex min-h-full flex-col">
         {children}
-        <span class="token-keyword">&lt;</span><span class="token-func">Toaster</span> <span class="token-attr">defaultDuration</span>={4000} <span class="token-attr">position</span>=<span class="token-str">"top-center"</span> <span class="token-keyword">/&gt;</span>
-      <span class="token-keyword">&lt;/</span><span class="token-attr">body</span><span class="token-keyword">&gt;</span>
-    <span class="token-keyword">&lt;/</span><span class="token-attr">html</span><span class="token-keyword">&gt;</span>
+        <Toaster defaultDuration={3500} position="top-center" />
+      </body>
+    </html>
   );
-}</code></pre>
+}
+```
 
-  <h3>2. Dynamic Toast Dispatching</h3>
-  <pre><code><span class="token-keyword">import</span> { toast } <span class="token-keyword">from</span> <span class="token-str">"@/components/ui/use-toast"</span>;
+### `Toaster` Props
 
-<span class="token-comment">// Trigger built-in preset or custom CSS tokens</span>
-<span class="token-func">toast</span>({
-  title: <span class="token-str">"Changes Saved"</span>,
-  description: <span class="token-str">"Preferences synced with cloud database."</span>,
-  variant: <span class="token-str">"success"</span>,
+| Prop | Type | Description |
+| --- | --- | --- |
+| `defaultDuration` | `number` | Default time, in milliseconds, before a toast dismisses. Individual toasts can override it. |
+| `position` | `string` | Position of the toast viewport, for example `"top-center"`. |
+
+---
+
+## Usage
+
+Import `toast` inside a client component, then call it from an event handler or client-side action.
+
+```tsx
+"use client";
+
+import { toast } from "@/components/ui/use-toast";
+
+export default function Page() {
+  return (
+    <button
+      onClick={() =>
+        toast({
+          variant: "success",
+          title: "Changes saved",
+          description: "Your preferences were updated successfully.",
+        })
+      }
+    >
+      Show toast
+    </button>
+  );
+}
+```
+
+---
+
+## Examples
+
+### Success Toast
+
+```tsx
+toast({
+  variant: "success",
+  title: "Changes saved",
+  description: "Your preferences were updated successfully.",
+});
+```
+
+### Error Toast
+
+```tsx
+toast({
+  variant: "error",
+  title: "Action failed",
+  description: "Could not connect to the remote server.",
+});
+```
+
+### Custom Colors and Duration
+
+Use `customColor` to override the toast palette. Values can be literal CSS colors, such as hex values, or CSS custom properties such as `var(--primary)`.
+
+```tsx
+toast({
+  title: "Pro subscription unlocked",
+  description: "Welcome to VIP perks and custom styling.",
   duration: 5000,
   customColor: {
-    bg: <span class="token-str">"var(--card)"</span>,
-    border: <span class="token-str">"var(--primary)"</span>,
-    progress: <span class="token-str">"var(--primary)"</span>,
+    bg: "var(--card)",
+    border: "var(--primary)",
+    text: "var(--card-foreground)",
+    icon: "var(--primary)",
+    progress: "var(--primary)",
   },
-});</code></pre>
+});
+```
 
-  <h2>⚙️ API Specification</h2>
-  <table>
-    <thead>
-      <tr>
-        <th style="width: 18%;">Property</th>
-        <th style="width: 28%;">Type</th>
-        <th>Description</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td><code>title</code></td>
-        <td><code>React.ReactNode</code></td>
-        <td>Header text or JSX component.</td>
-      </tr>
-      <tr>
-        <td><code>description</code></td>
-        <td><code>React.ReactNode</code></td>
-        <td>Secondary details/body text.</td>
-      </tr>
-      <tr>
-        <td><code>variant</code></td>
-        <td><code>"default" | "success" | "error" | "warning" | "info"</code></td>
-        <td>Semantic preset visual theme.</td>
-      </tr>
-      <tr>
-        <td><code>duration</code></td>
-        <td><code>number</code></td>
-        <td>Lifespan in ms (overrides layout default).</td>
-      </tr>
-      <tr>
-        <td><code>customColor</code></td>
-        <td><code>{ bg?, text?, border?, icon?, progress? }</code></td>
-        <td>Inline color overrides (Hex, RGB, or CSS variables).</td>
-      </tr>
-      <tr>
-        <td><code>className</code></td>
-        <td><code>string</code></td>
-        <td>Direct Tailwind class utility overrides.</td>
-      </tr>
-    </tbody>
-  </table>
+### Tailwind Class Override
 
-  <div class="footer">
-    <span>Canopy UI Specification &bull; Open Source Design System</span>
-    <span>MIT License &bull; Shawn Rimai</span>
-  </div>
+Use `className` when you want to apply direct Tailwind utility classes to an individual toast.
 
-</body>
-</html>
+```tsx
+toast({
+  title: "Tailwind classes applied",
+  description: "Styled with direct className overrides.",
+  duration: 3500,
+  customColor: {
+    progress: "var(--destructive)",
+  },
+  className: "border-destructive/40 bg-card text-primary",
+});
+```
+
+---
+
+## Toast API
+
+```ts
+toast({
+  variant?: "success" | "error";
+  title?: string;
+  description?: string;
+  duration?: number;
+  customColor?: {
+    bg?: string;
+    border?: string;
+    text?: string;
+    icon?: string;
+    progress?: string;
+  };
+  className?: string;
+});
+```
+
+| Option | Description |
+| --- | --- |
+| `variant` | Applies a built-in visual style, such as `"success"` or `"error"`. |
+| `title` | Primary toast message. |
+| `description` | Supporting text displayed below the title. |
+| `duration` | Dismiss timeout in milliseconds. Overrides `Toaster`’s `defaultDuration`. |
+| `customColor.bg` | Toast background color. |
+| `customColor.border` | Toast border color. |
+| `customColor.text` | Toast text color. |
+| `customColor.icon` | Toast icon color. |
+| `customColor.progress` | Toast progress-bar color. |
+| `className` | Tailwind or custom CSS classes applied directly to the toast. |
+
+---
+
+## Development
+
+Build the CLI:
+
+```bash
+npm run build
+```
+
+Link the package locally:
+
+```bash
+npm link
+```
+
+Then, inside a sample React or Next.js project, install a component through the linked CLI:
+
+```bash
+canopy-ui add toast
+```
+
+## Publishing
+
+Publish the package to npm:
+
+```bash
+npm publish --access public
+```
+
+## License
+
+MIT © Shawn Rimai
