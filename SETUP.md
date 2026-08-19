@@ -868,3 +868,6 @@ npm publish --dry-run
 npm publish --access public
 
 ```
+
+## 7. Automated CI/CD Deployment (Github Actions)
+### <kbd>.github/workflows/publish.yml</kbd>
