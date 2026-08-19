@@ -56,7 +56,7 @@ npm install -D typescript @types/node @types/fs-extra tsup
   "version": "1.0.0",
   "description": "An accessible, themable React UI component library built for fast-moving web applications.",
   "main": "./dist/index.js",
-  "bin" : {
+  "bin": {
     "canopy-ui": "./dist/index.js"
   },
   "files": [
@@ -64,8 +64,8 @@ npm install -D typescript @types/node @types/fs-extra tsup
     "templates"
   ],
   "scripts": {
-    "build": "tsup src/index.ts --format esm --banner:js \"#!/usr/bin/env node\"",
-    "dev": "tsup src/index.ts --format esm --watch",
+    "build": "tsup",
+    "dev": "tsup --watch",
     "prepublishOnly": "npm run build",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -73,7 +73,14 @@ npm install -D typescript @types/node @types/fs-extra tsup
     "type": "git",
     "url": "git+https://github.com/ShawnR04/canopy-ui.git"
   },
-  "keywords": ["react", "ui", "toast", "shadcn", "components", "cli"],
+  "keywords": [
+    "react",
+    "ui",
+    "toast",
+    "shadcn",
+    "components",
+    "cli"
+  ],
   "author": "Shawn Rimai",
   "license": "MIT",
   "type": "module",
@@ -86,6 +93,7 @@ npm install -D typescript @types/node @types/fs-extra tsup
     "commander": "^15.0.0",
     "execa": "^10.0.1",
     "fs-extra": "^11.4.0",
+    "lucide-react": "^1.31.0",
     "ora": "^9.4.1",
     "picocolors": "^1.1.1"
   },
@@ -96,9 +104,26 @@ npm install -D typescript @types/node @types/fs-extra tsup
     "typescript": "^7.0.2"
   }
 }
+
 ```
 
-### 2.3 Typescript Configuration (`tsconfig.json`) - Documented
+### 2.4 Create a `tsup.config.ts` file in the Root directory
+### <kbd>tsup.config.ts</kbd>
+```ts
+import { defineConfig } from "tsup";
+
+export default defineConfig({
+  entry: ["src/index.ts"],
+  format: ["esm"],
+  dts: false,
+  clean: true,
+  banner: {
+    js: "#!/usr/bin/env node",
+  },
+});
+```
+
+### 2.4 Typescript Configuration (`tsconfig.json`) - Documented
 
 #### Creeate the `tsconfig.json` file
 ```bash
@@ -736,4 +761,98 @@ program
 
 // Parse command line arguments from process.argv
 program.parse(process.argv);
+```
+
+## 5. How the User Consumes the Installed Toast
+### 5.1 Mounted in Root Layout (`app/layout.tsx`)
+Duration is configured in the root level
+### <kbd>app/layout.tsx</kbd>
+```tsx
+import { Toaster } from "@/components/ui/toast";
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+    return (
+        <html lang="en">
+            <body>
+                {children}
+                {/* Set global default duration (3500ms) and viewport position */}
+                <Toaster defaultDuration={3500} position="bottom-right" />
+            </body>
+        </html>
+    );
+}
+
+```
+
+### 5.2 Invoking Toasts with Built-in Variants & Custom Colors
+### <kbd>app/page.tsx</kbd>
+```tsx
+"use client";
+import { toast } from "@/components/ui/use-toast";
+export default function Page() {
+    return (
+        <div className="p-8 space-x-4">
+            {/* Example 1: Built-in Success Preset */}
+            <button
+                onClick={() =>
+                    toast({
+                        variant: "success",
+                        title: "Changes Saved",
+                        description: "Your preferences were updated successfully.",
+                    })
+                }
+            >
+            Success Toast
+            </button>
+            {/* Example 2: Fully Custom User Color with Custom Override Duration */}
+            <button
+                onClick={() =>
+                    toast({
+                        title: "Pro Subscription Unlocked",
+                        description: "Welcome to VIP perks and custom styling.",
+                        duration: 8000, // Custom duration overriding root layout
+                        customColor: {
+                            bg: "#3b0764", // Dark purple background
+                            border: "#9333ea", // Vibrant amethyst border
+                            text: "#f3e8ff", // Lavender text
+                        },
+                    })
+                }
+            >
+                Custom Purple Toast
+            </button>
+        </div>
+    );
+}
+
+```
+
+## 6. Local Testing , Git and npm Publishing Procedures
+### Local Verification Steps
+
+1. Compile the CLI: `npm run build` inside `canopy-ui`.
+2. Create a global symlink: `npm link`.
+3. Navigate to a test Next.js app and run: `canopy-ui add toast`.
+4. Verify that `components/ui.toast.tsx` and `components/ui/use-toast.ts` exist and dependencies are installed
+5. Clean up synlink: `npm unlink` in the CLI folder
+
+### Git and GitHub Repository Initialization
+```bash
+git init
+git add .
+git commit -m "feat: initial commit with CLI engine, toast template, and documentation"
+git branch -M main
+git remote add origin https://github.com/ShawnR04/canopy-ui.git
+git push -u origin main
+
+```
+
+### Publishing to npm Registry
+```bash
+# Step 1: Log in with credentials
+npm login
+# Step 2: Validate package bundle in dry-run mode
+npm publish --dry-run
+# Step 3: Publish package publicly to npm
+npm publish --access public
+
 ```
