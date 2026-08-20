@@ -1,4 +1,4 @@
-9# <img src="./public/favicon.ico" width="48" height="48" align="center" /> Canopy UI
+# <img src="./public/favicon.ico" width="48" height="48" align="center" /> Canopy UI
 
 <div align="center">
 
