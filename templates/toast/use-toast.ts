@@ -48,7 +48,7 @@ export interface ToastItem extends ToastOptions {
 // Maximum number of visible toast cards on screen simultaneously
 const TOAST_LIMIT = 5;
 // Delay before removed toasts are completely purged from memory (allows exit transition)
-const TOAST_REMOVE_DELAY = 1000;
+const TOAST_REMOVE_DELAY = 200;
 
 // Discriminated union type representing all possible reducer actions
 type Action = 
