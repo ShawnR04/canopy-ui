@@ -1,261 +1,291 @@
-# Canopy UI
+# <img src="./public/favicon.ico" width="48" height="48" align="center" /> Canopy UI
 
-> A modern, copy-and-paste CLI for adding customizable UI components directly to React and Next.js codebases.
+<div align="center">
 
-Canopy UI installs component source code into your project, giving you full ownership over the markup, styles, behavior, and design tokens. Customize components as much as you need—without being locked into a hosted UI library.
+### Custom UI Components for React & Next.js
 
-## Quick Start
+A modern npm package for building beautiful, customizable user interfaces.
 
-Add a component with one command:
+<br />
 
-```bash
-npx canopy-ui add toast
-```
+[![npm](https://img.shields.io/badge/npm-CB3837?style=for-the-badge\&logo=npm\&logoColor=white)](https://www.npmjs.com/package/canopy-ui)
+[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge\&logo=typescript\&logoColor=white)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/React-20232A?style=for-the-badge\&logo=react\&logoColor=61DAFB)](https://react.dev/)
+[![Next.js](https://img.shields.io/badge/Next.js-000000?style=for-the-badge\&logo=nextdotjs\&logoColor=white)](https://nextjs.org/)
 
-Run the command without a component name to open an interactive multi-select prompt:
+<br />
 
-```bash
-npx canopy-ui add
-```
+<a href="https://canopy-ui-web.vercel.app/">
 
----
+<img src="https://img.shields.io/badge/Documentation-Canopy%20UI-7C3AED?style=for-the-badge&logo=readthedocs&logoColor=white" />
 
-## Components
+</a>
 
-### Toast
+<a href="https://www.npmjs.com/package/canopy-ui">
 
-A customizable, animated notification system with:
+<img src="https://img.shields.io/badge/npm-View%20Package-CB3837?style=for-the-badge&logo=npm&logoColor=white" />
 
-- Built-in `success` and `error` variants
-- Configurable global default duration
-- Configurable screen position
-- Per-toast duration overrides
-- Custom colors using hex values, CSS variables, or design tokens
-- Progress-bar color controls
-- Direct Tailwind `className` overrides
+</a>
 
-## Installation
+<a href="https://github.com/ShawnR04/canopy-ui">
 
-Install the Toast component into your project:
+<img src="https://img.shields.io/badge/GitHub-Repository-181717?style=for-the-badge&logo=github&logoColor=white" />
 
-```bash
-npx canopy-ui add toast
-```
+</a>
 
-The component is added to your local UI directory, typically under:
+</div>
 
-```text
-components/ui/toast.tsx
-components/ui/use-toast.ts
-```
-
-> The exact generated paths may depend on your project's configured import aliases.
+<br />
 
 ---
 
-## Setup
+## <img src="https://api.iconify.design/lucide/book-open.svg?color=%233B82F6" width="25" /> About Canopy UI
 
-Mount `Toaster` once in your root `app/layout.tsx`. This provides the toast viewport for all routes in your application.
+**Canopy UI** is a customizable UI component library for **React** and **Next.js** applications.
 
-```tsx
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+The project is built around a simple idea: provide developers with modern, polished UI components that are easy to integrate and customize.
 
-import "./globals.css";
-import { Toaster } from "@/components/ui/toast";
+Canopy UI currently provides a **Toast notification component**, with additional components planned for the future.
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
-export const metadata: Metadata = {
-  title: "My App",
-  description: "My application",
-};
-
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
-  return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="flex min-h-full flex-col">
-        {children}
-        <Toaster defaultDuration={3500} position="top-center" />
-      </body>
-    </html>
-  );
-}
-```
-
-### `Toaster` Props
-
-| Prop | Type | Description |
-| --- | --- | --- |
-| `defaultDuration` | `number` | Default time, in milliseconds, before a toast dismisses. Individual toasts can override it. |
-| `position` | `string` | Position of the toast viewport, for example `"top-center"`. |
+> **Simple components. Flexible design. Built for your application.**
 
 ---
 
-## Usage
+## <img src="https://api.iconify.design/lucide/layers-3.svg?color=%238B5CF6" width="25" /> Components
 
-Import `toast` inside a client component, then call it from an event handler or client-side action.
+<div align="center">
 
-```tsx
-"use client";
+<table>
+<tr>
 
-import { toast } from "@/components/ui/use-toast";
+<td align="center" width="50%">
 
-export default function Page() {
-  return (
-    <button
-      onClick={() =>
-        toast({
-          variant: "success",
-          title: "Changes saved",
-          description: "Your preferences were updated successfully.",
-        })
-      }
-    >
-      Show toast
-    </button>
-  );
-}
-```
+<img src="https://api.iconify.design/lucide/bell.svg?color=%23F59E0B" width="42" />
 
----
+<br /><br />
 
-## Examples
+<b>Toast</b>
 
-### Success Toast
+<br />
 
-```tsx
-toast({
-  variant: "success",
-  title: "Changes saved",
-  description: "Your preferences were updated successfully.",
-});
-```
+Customizable notification component with configurable variants, colors, positioning, durations, and styling.
 
-### Error Toast
+<br /><br />
 
-```tsx
-toast({
-  variant: "error",
-  title: "Action failed",
-  description: "Could not connect to the remote server.",
-});
-```
+<img src="https://img.shields.io/badge/Available-22C55E?style=flat-square&logoColor=white" />
 
-### Custom Colors and Duration
+</td>
 
-Use `customColor` to override the toast palette. Values can be literal CSS colors, such as hex values, or CSS custom properties such as `var(--primary)`.
+<td align="center" width="50%">
 
-```tsx
-toast({
-  title: "Pro subscription unlocked",
-  description: "Welcome to VIP perks and custom styling.",
-  duration: 5000,
-  customColor: {
-    bg: "var(--card)",
-    border: "var(--primary)",
-    text: "var(--card-foreground)",
-    icon: "var(--primary)",
-    progress: "var(--primary)",
-  },
-});
-```
+<img src="https://api.iconify.design/lucide/sparkles.svg?color=%238B5CF6" width="42" />
 
-### Tailwind Class Override
+<br /><br />
 
-Use `className` when you want to apply direct Tailwind utility classes to an individual toast.
+<b>More Coming Soon</b>
 
-```tsx
-toast({
-  title: "Tailwind classes applied",
-  description: "Styled with direct className overrides.",
-  duration: 3500,
-  customColor: {
-    progress: "var(--destructive)",
-  },
-  className: "border-destructive/40 bg-card text-primary",
-});
-```
+<br />
+
+Canopy UI is actively growing with additional components planned for future releases.
+
+<br /><br />
+
+<img src="https://img.shields.io/badge/Coming%20Soon-8B5CF6?style=flat-square&logoColor=white" />
+
+</td>
+
+</tr>
+</table>
+
+</div>
 
 ---
 
-## Toast API
+## <img src="https://api.iconify.design/lucide/sparkles.svg?color=%23F59E0B" width="25" /> Features
 
-```ts
-toast({
-  variant?: "success" | "error";
-  title?: string;
-  description?: string;
-  duration?: number;
-  customColor?: {
-    bg?: string;
-    border?: string;
-    text?: string;
-    icon?: string;
-    progress?: string;
-  };
-  className?: string;
-});
-```
+<div align="center">
 
-| Option | Description |
-| --- | --- |
-| `variant` | Applies a built-in visual style, such as `"success"` or `"error"`. |
-| `title` | Primary toast message. |
-| `description` | Supporting text displayed below the title. |
-| `duration` | Dismiss timeout in milliseconds. Overrides `Toaster`’s `defaultDuration`. |
-| `customColor.bg` | Toast background color. |
-| `customColor.border` | Toast border color. |
-| `customColor.text` | Toast text color. |
-| `customColor.icon` | Toast icon color. |
-| `customColor.progress` | Toast progress-bar color. |
-| `className` | Tailwind or custom CSS classes applied directly to the toast. |
+<table>
+<tr>
+
+<td align="center" width="25%">
+
+<img src="https://api.iconify.design/lucide/palette.svg?color=%23EC4899" width="36" />
+
+<br /><br />
+
+<b>Customizable</b>
+
+<br />
+
+Designed to adapt to your application's visual style.
+
+</td>
+
+<td align="center" width="25%">
+
+<img src="https://api.iconify.design/lucide/code-2.svg?color=%238B5CF6" width="36" />
+
+<br /><br />
+
+<b>Developer Friendly</b>
+
+<br />
+
+Built with modern React and TypeScript.
+
+</td>
+
+<td align="center" width="25%">
+
+<img src="https://api.iconify.design/lucide/zap.svg?color=%23F59E0B" width="36" />
+
+<br /><br />
+
+<b>Lightweight</b>
+
+<br />
+
+Focused components without unnecessary complexity.
+
+</td>
+
+<td align="center" width="25%">
+
+<img src="https://api.iconify.design/lucide/settings-2.svg?color=%233B82F6" width="36" />
+
+<br /><br />
+
+<b>Flexible</b>
+
+<br />
+
+Designed to work with your existing application and design system.
+
+</td>
+
+</tr>
+</table>
+
+</div>
 
 ---
 
-## Development
+## <img src="https://api.iconify.design/lucide/book-open.svg?color=%233B82F6" width="25" /> Documentation
 
-Build the CLI:
+The complete Canopy UI documentation is available on the official documentation site.
 
-```bash
-npm run build
-```
+It includes:
 
-Link the package locally:
+* Component installation
+* Configuration
+* Usage
+* API references
+* Customization
+* Examples
+* CLI documentation
 
-```bash
-npm link
-```
+<div align="center">
 
-Then, inside a sample React or Next.js project, install a component through the linked CLI:
+<a href="https://canopy-ui-web.vercel.app/">
 
-```bash
-canopy-ui add toast
-```
+<img src="https://img.shields.io/badge/Read%20the%20Documentation-7C3AED?style=for-the-badge&logo=readthedocs&logoColor=white" />
 
-## Publishing
+</a>
 
-Publish the package to npm:
+</div>
 
-```bash
-npm publish --access public
-```
+---
 
-## License
+## <img src="https://api.iconify.design/lucide/layers.svg?color=%2306B6D4" width="25" /> Tech Stack
 
-MIT © Shawn Rimai
+<div align="center">
+
+[![React](https://img.shields.io/badge/React-20232A?style=for-the-badge\&logo=react\&logoColor=61DAFB)](https://react.dev/)
+[![Next.js](https://img.shields.io/badge/Next.js-000000?style=for-the-badge\&logo=nextdotjs\&logoColor=white)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge\&logo=typescript\&logoColor=white)](https://www.typescriptlang.org/)
+[![npm](https://img.shields.io/badge/npm-CB3837?style=for-the-badge\&logo=npm\&logoColor=white)](https://www.npmjs.com/)
+
+</div>
+
+---
+
+## <img src="https://api.iconify.design/lucide/heart.svg?color=%23EC4899" width="25" /> Philosophy
+
+Canopy UI is built around a simple principle:
+
+> **Build beautiful UI without unnecessary complexity.**
+
+Components should be easy to integrate, easy to customize, and flexible enough to fit into different applications.
+
+Canopy UI aims to provide a growing collection of components that developers can rely on when building modern interfaces.
+
+---
+
+## <img src="https://api.iconify.design/lucide/rocket.svg?color=%23EF4444" width="25" /> Roadmap
+
+Canopy UI currently includes:
+
+* <img src="https://api.iconify.design/lucide/check-circle-2.svg?color=%2322C55E" width="18" /> Toast
+
+Additional components are planned for future releases.
+
+---
+
+## <img src="https://api.iconify.design/lucide/github.svg?color=%23181717" width="25" /> Repository
+
+Canopy UI is open source and available on GitHub.
+
+<div align="center">
+
+<a href="https://github.com/ShawnR04/canopy-ui">
+
+<img src="https://img.shields.io/badge/View%20Source%20Code-GitHub-181717?style=for-the-badge&logo=github&logoColor=white" />
+
+</a>
+
+</div>
+
+---
+
+## <img src="https://api.iconify.design/lucide/scale.svg?color=%2322C55E" width="25" /> License
+
+Canopy UI is licensed under the **MIT License**.
+
+Copyright © 2026 **Shawn Rimai**
+
+---
+
+<div align="center">
+
+<img src="./public/favicon.ico" width="42" height="42" align="center" /> 
+
+### Canopy UI
+
+**Custom UI. Simple integration. Flexible design.**
+
+<br />
+
+<a href="https://canopy-ui-web.vercel.app/">
+
+<img src="https://img.shields.io/badge/Documentation-Visit%20Canopy%20UI-7C3AED?style=for-the-badge&logo=readthedocs&logoColor=white" />
+
+</a>
+
+<a href="https://www.npmjs.com/package/canopy-ui">
+
+<img src="https://img.shields.io/badge/npm-Canopy%20UI-CB3837?style=for-the-badge&logo=npm&logoColor=white" />
+
+</a>
+
+<a href="https://github.com/ShawnR04/canopy-ui">
+
+<img src="https://img.shields.io/badge/GitHub-ShawnR04-181717?style=for-the-badge&logo=github&logoColor=white" />
+
+</a>
+
+<br /><br />
+
+<sub>Built by Shawn Rimai</sub>
+
+</div>
