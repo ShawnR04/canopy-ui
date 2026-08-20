@@ -1,4 +1,4 @@
-# <img src="./public/favicon.ico" width="48" height="48" align="center" /> Canopy UI
+9# <img src="./public/favicon.ico" width="48" height="48" align="center" /> Canopy UI
 
 <div align="center">
 
@@ -272,7 +272,7 @@ Copyright © 2026 **Shawn Rimai**
 
 </a>
 
-<a href="https://www.npmjs.com/package/canopy-ui">
+<a href="https://www.npmjs.com/package/@marv3l/canopy-ui">
 
 <img src="https://img.shields.io/badge/npm-Canopy%20UI-CB3837?style=for-the-badge&logo=npm&logoColor=white" />
 
