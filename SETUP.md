@@ -871,3 +871,84 @@ npm publish --access public
 
 ## 7. Automated CI/CD Deployment (Github Actions)
 ### <kbd>.github/workflows/publish.yml</kbd>
+
+# Publishing Updates to My NPM Package
+
+Use this checklist whenever you want to publish a new version of your package to npm.
+
+## 1. Make Your Changes
+
+Update your package code and test everything locally.
+
+```bash
+npm run build
+```
+
+Run your tests if your project has them:
+
+```bash
+npm test
+```
+
+## 2. Update the Version
+
+Choose the appropriate version type:
+
+```bash
+npm version patch
+```
+
+For bug fixes: `1.0.0` → `1.0.1`
+
+```bash
+npm version minor
+```
+
+For new backwards-compatible features: `1.0.0` → `1.1.0`
+
+```bash
+npm version major
+```
+
+For breaking changes: `1.0.0` → `2.0.0`
+
+## 3. Publish to npm
+
+Make sure you are logged in:
+
+```bash
+npm login
+```
+
+Then publish the update:
+
+```bash
+npm publish
+```
+
+For a scoped public package, use:
+
+```bash
+npm publish --access public
+```
+
+## 4. Verify the Update
+
+Check the published package:
+
+```bash
+npm view <your-package-name> version
+```
+
+You can also check it directly on the npm website.
+
+## Quick Update Workflow
+
+```bash
+npm run build
+npm test
+npm version patch
+npm publish
+```
+
+Replace `patch` with `minor` or `major` when appropriate.
