@@ -1,21 +1,14 @@
 "use client";
 
-// Import React runtime and component types
 import * as React from "react";
-// Import semantic SVG icons from lucide-react
-import { CheckCircle2, AlertCircle, AlertTriangle, Info, X } from "lucide-react";
-// Import toast hook and type interfaces
+import { CheckCircle2, AlertCircle, AlertTriangle, Info, Loader2, X, LucideIcon } from "lucide-react";
 import { useToast, ToastItem } from "./use-toast";
 
-// Props accepted by the root Toaster container mounted in the root layout
 export interface ToasterProps {
-  // Global lifespan (in milliseconds) for all toasts; defaults to 4000ms
   defaultDuration?: number;
-  // Screen viewport placement position
   position?: "top-right" | "bottom-right" | "top-center" | "bottom-center" | "top-left" | "bottom-left";
 }
 
-// Visual preset configurations mapped to semantic & dark-safe theme tokens
 const variantStyles: Record<
   string,
   {
@@ -26,7 +19,7 @@ const variantStyles: Record<
     progress: string;
     iconColor: string;
     badge: string;
-    icon: any;
+    icon: LucideIcon | null;
   }
 > = {
   default: {
@@ -79,9 +72,18 @@ const variantStyles: Record<
     badge: "bg-sky-100 text-sky-900 dark:bg-sky-900/80 dark:text-sky-100 border-sky-300 dark:border-sky-700",
     icon: Info,
   },
+  loading: {
+    bg: "bg-card dark:bg-neutral-900/95",
+    border: "border-border dark:border-neutral-700/80",
+    title: "text-neutral-900 dark:text-neutral-50",
+    description: "text-neutral-600 dark:text-neutral-200",
+    progress: "bg-primary dark:bg-sky-400",
+    iconColor: "text-primary dark:text-sky-400 animate-spin",
+    badge: "bg-neutral-200 text-neutral-800 dark:bg-neutral-800 dark:text-neutral-100 border-neutral-300 dark:border-neutral-700",
+    icon: Loader2,
+  },
 };
 
-// Root Toaster Component placed into layout.tsx
 export function Toaster({ defaultDuration = 4000, position = "top-center" }: ToasterProps) {
   const { toasts, dismiss } = useToast();
 
@@ -161,7 +163,6 @@ export function Toaster({ defaultDuration = 4000, position = "top-center" }: Toa
   );
 }
 
-// Atomic Toast Card Component
 function ToastElement({
   toast,
   defaultDuration,
@@ -171,44 +172,84 @@ function ToastElement({
   defaultDuration: number;
   onDismiss: () => void;
 }) {
-  const duration = toast.duration ?? defaultDuration;
+  const isAutoDismissible = toast.variant !== "loading" && (toast.duration === undefined || toast.duration > 0);
+  const activeDuration = toast.duration ?? defaultDuration;
+  const showProgress = toast.showProgress ?? isAutoDismissible;
 
-  // Reset lifespan timer whenever count or duration changes
+  const [isPaused, setIsPaused] = React.useState(false);
+  const remainingTimeRef = React.useRef<number>(activeDuration);
+  const startTimeRef = React.useRef<number>(0);
+  const timerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Update remaining ref on prop changes without triggering synchronous setState re-renders
   React.useEffect(() => {
-    if (duration <= 0) return;
-    const timer = setTimeout(() => {
+    remainingTimeRef.current = activeDuration;
+  }, [toast.variant, toast.title, toast.count, activeDuration]);
+
+  // Handle countdown timeout
+  React.useEffect(() => {
+    if (!isAutoDismissible || isPaused) {
+      if (timerRef.current) clearTimeout(timerRef.current);
+      return;
+    }
+
+    startTimeRef.current = Date.now();
+    timerRef.current = setTimeout(() => {
       onDismiss();
-    }, duration);
-    return () => clearTimeout(timer);
-  }, [duration, toast.count, onDismiss]);
+    }, remainingTimeRef.current);
+
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, [isAutoDismissible, isPaused, toast.variant, toast.title, toast.count, activeDuration, onDismiss]);
+
+  const handleMouseEnter = () => {
+    if (!isAutoDismissible) return;
+    if (timerRef.current) clearTimeout(timerRef.current);
+    const elapsed = Date.now() - startTimeRef.current;
+    remainingTimeRef.current = Math.max(remainingTimeRef.current - elapsed, 0);
+    setIsPaused(true);
+  };
+
+  const handleMouseLeave = () => {
+    if (!isAutoDismissible) return;
+    setIsPaused(false);
+  };
 
   const variant = toast.variant || "default";
   const defaultStyle = variantStyles[variant] || variantStyles.default;
-  const IconComponent = defaultStyle.icon;
+  const IconComponent = toast.icon !== undefined ? null : defaultStyle.icon;
 
-  // 1. Only build inline styles for values that are explicitly provided
   const customInlineStyle: React.CSSProperties = {};
   if (toast.customColor?.bg) customInlineStyle.backgroundColor = toast.customColor.bg;
   if (toast.customColor?.border) customInlineStyle.borderColor = toast.customColor.border;
   if (toast.customColor?.text) customInlineStyle.color = toast.customColor.text;
 
-  // 2. Prevent default Tailwind classes from overriding user custom classes or inline styles
   const userHasBg = Boolean(toast.customColor?.bg || toast.className?.match(/(?:^|\s)bg-/));
   const userHasBorder = Boolean(toast.customColor?.border || toast.className?.match(/(?:^|\s)border-/));
 
+  const isError = variant === "error";
+
   return (
     <div
+      role={isError ? "alert" : "status"}
+      aria-live={isError ? "assertive" : "polite"}
       style={customInlineStyle}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
       className={`pointer-events-auto relative overflow-hidden flex items-start gap-3 w-full p-4 rounded-[var(--radius-lg,0.625rem)] border shadow-xl dark:shadow-2xl dark:shadow-black/70 dark:ring-1 dark:ring-white/10 backdrop-blur-md transition-all duration-300 ease-out ${
         !userHasBg ? defaultStyle.bg : ""
       } ${!userHasBorder ? defaultStyle.border : ""} ${toast.className || ""}`}
     >
-      {/* Render icon if preset defines one */}
-      {IconComponent && (
-        <IconComponent
-          className={`w-5 h-5 mt-0.5 shrink-0 ${defaultStyle.iconColor}`}
-          style={{ color: toast.customColor?.icon }}
-        />
+      {toast.icon !== undefined ? (
+        <div className="shrink-0 mt-0.5">{toast.icon}</div>
+      ) : (
+        IconComponent && (
+          <IconComponent
+            className={`w-5 h-5 mt-0.5 shrink-0 ${defaultStyle.iconColor}`}
+            style={{ color: toast.customColor?.icon }}
+          />
+        )
       )}
 
       {/* Toast Content Area */}
@@ -238,7 +279,6 @@ function ToastElement({
           )}
         </div>
 
-        {/* Collapsible/Expanding Description Wrapper */}
         {toast.description && (
           <div
             className="grid overflow-hidden"
@@ -260,28 +300,28 @@ function ToastElement({
           </div>
         )}
 
-        {/* Interactive Action Button Slot */}
         {toast.action && <div className="pt-2">{toast.action}</div>}
       </div>
 
-      {/* Close Button */}
       <button
         onClick={onDismiss}
+        aria-label="Close toast"
         className="p-1 rounded-md opacity-70 hover:opacity-100 hover:bg-neutral-500/15 dark:hover:bg-white/10 transition-colors text-neutral-500 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white"
       >
         <X className="w-4 h-4" />
       </button>
 
-      {/* Animated Lifespan Progress Bar (Resets on stack increment) */}
-      {duration > 0 && (
+      {/* Progress Bar resets animation on each state change */}
+      {showProgress && isAutoDismissible && (
         <div
-          key={toast.count}
+          key={`${toast.id}-${toast.variant}-${toast.count}`}
           className={`absolute bottom-0 left-0 right-0 h-1 origin-left ${
             !toast.customColor?.progress ? defaultStyle.progress : ""
           }`}
           style={{
             backgroundColor: toast.customColor?.progress,
-            animation: `toast-progress ${duration}ms linear forwards`,
+            animation: `toast-progress ${activeDuration}ms linear forwards`,
+            animationPlayState: isPaused ? "paused" : "running",
           }}
         />
       )}

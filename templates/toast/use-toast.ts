@@ -1,113 +1,134 @@
 "use client";
 
-// Import React to access state hooks and ReactNode type definitions
 import * as React from "react";
 
-// Define the supported visual preset types for toast notifications
-export type ToastVariant = "default" | "success" | "error" | "warning" | "info" | "custom";
+/**
+ * Supported visual styles and operational modes for toasts.
+ * - "default" | "success" | "error" | "warning" | "info": Semantic presets
+ * - "custom": Custom token/color overrides
+ * - "loading": Persistent spinner mode for asynchronous operations
+ */
+export type ToastVariant =
+  | "default"
+  | "success"
+  | "error"
+  | "warning"
+  | "info"
+  | "custom"
+  | "loading";
 
-// Interface defining all configurable parameters when triggering a toast notification
 export interface ToastOptions {
-  // Unique identifier for toast; auto-generated if omitted
+  /** Optional custom identifier. If omitted, a collision-resistant UUID is generated. */
   id?: string;
-  // Primary header text or React component
+  /** Primary title text or JSX element displayed in the toast header. */
   title?: React.ReactNode;
-  // Secondary descriptive message or details
+  /** Secondary explanatory text or JSX node rendered below the title. */
   description?: React.ReactNode;
-  // Optional action button or interactive element
+  /** Interactive action button or control rendered at the bottom of the toast. */
   action?: React.ReactNode;
-  // Visual style preset (success, error, warning, info, default, custom)
+  /** Visual variant styling preset. Defaults to "default". */
   variant?: ToastVariant;
-  // Individual lifespan in milliseconds; overrides the global layout default
+  /** Display duration in milliseconds before auto-dismissing. Set to 0 or Infinity to prevent auto-dismiss. */
   duration?: number;
-  // Maximum number of duplicate stacks allowed for this toast (defaults to 5)
+  /** Maximum number of duplicate message stacks allowed for this specific toast (defaults to 5). */
   maxCount?: number;
-  // User-defined custom styling parameters for dynamic themes
+  /** Explicitly toggle the animated bottom progress bar. Defaults to true when auto-dismissible. */
+  showProgress?: boolean;
+  /** Optional custom icon node to override the variant preset icon. */
+  icon?: React.ReactNode;
+  /** Custom inline token styling overrides for background, border, text, progress bar, and icon. */
   customColor?: {
-    // Custom CSS background color (HEX, RGB, or HSL)
     bg?: string;
-    // Custom text color
     text?: string;
-    // Custom border stroke color
     border?: string;
-    // Custom progress bar stroke color
     progress?: string;
-    // Custom icon fill/stroke tint
     icon?: string;
   };
-  // Additional Tailwind or custom CSS classes applied to toast container
+  /** Additional Tailwind or CSS class names to apply to the root toast card container. */
   className?: string;
 }
 
-// Internal representation of an active toast item containing open state
 export interface ToastItem extends ToastOptions {
-  // Guaranteed string ID for DOM key mapping
   id: string;
-  // Boolean flag controlling entrance and exit animations
   open: boolean;
-  // Tracks duplicate trigger count
   count: number;
-  // Indicates if maximum stack limit has been hit
   maxReached?: boolean;
 }
 
-// Maximum number of visible toast cards on screen simultaneously
+// -----------------------------------------------------------------------------
+// Constants & Configuration
+// -----------------------------------------------------------------------------
+
+/** Maximum number of simultaneous toasts rendered on screen at any time. */
 const TOAST_LIMIT = 5;
-// Default maximum stack limit for duplicate toast triggers
+
+/** Default duplicate stack cap if not overridden per toast. */
 const DEFAULT_MAX_COUNT = 5;
-// Delay before removed toasts are completely purged from memory (allows exit transition)
+
+/** Delay in ms before unmounting a dismissed toast from the state tree. */
 const TOAST_REMOVE_DELAY = 0;
 
-// Discriminated union type representing all possible reducer actions
+// -----------------------------------------------------------------------------
+// Action Types & State Management
+// -----------------------------------------------------------------------------
+
 type Action =
-  // Adds a newly triggered toast to state
   | { type: "ADD_TOAST"; toast: ToastItem }
-  // Modifies properties of an existing active toast
   | { type: "UPDATE_TOAST"; toast: Partial<ToastItem> }
-  // Initiates dismiss sequence (triggers exit animation)
   | { type: "DISMISS_TOAST"; toastId?: string }
-  // Purges toast object from memory after exit animation finishes
   | { type: "REMOVE_TOAST"; toastId?: string };
 
-// Structure of global toast memory state
 interface State {
   toasts: ToastItem[];
 }
 
-// Monotonically increasing counter for collision-free ID generation
-let count = 0;
-
-// Generates unique string identifiers for toast items
+/**
+ * Generates a collision-resistant unique identifier.
+ * Uses native crypto.randomUUID when available, falling back to high-resolution timestamps.
+ */
 function genId(): string {
-  count = (count + 1) % Number.MAX_SAFE_INTEGER;
-  return count.toString();
+  if (typeof crypto !== "undefined" && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
-// Map tracking active removal timers to prevent duplicate schedule queues
+/** Tracks active unmount timers to prevent duplicate queue dispatches. */
 const toastTimeouts = new Map<string, ReturnType<typeof setTimeout>>();
 
-// Schedule the hard removal of a dismissed toast after its exit animation completes
+/**
+ * Schedules a toast for removal from memory after dismissal animations complete.
+ */
 const addToRemoveQueue = (toastId: string) => {
-  // If a timeout is already scheduled for this ID, skip to avoid duplicates
   if (toastTimeouts.has(toastId)) return;
 
-  // Schedule state dispatch after delay
   const timeout = setTimeout(() => {
-    // Clean up timeout reference from tracking map
     toastTimeouts.delete(toastId);
-    // Dispatch removal action to purge from state
     dispatch({ type: "REMOVE_TOAST", toastId });
   }, TOAST_REMOVE_DELAY);
 
-  // Store reference in tracking map
   toastTimeouts.set(toastId, timeout);
 };
 
-// Pure reducer function handling toast state transitions
+/**
+ * Main state reducer managing insertion, deduplication stacking, updates, and dismissals.
+ */
 export const reducer = (state: State, action: Action): State => {
   switch (action.type) {
     case "ADD_TOAST": {
-      // Find existing active toast with identical title, description, and variant
+      // 1. In-place update: If a toast with this exact ID already exists (e.g. toast.promise transitions), update it
+      const existingByIdIndex = state.toasts.findIndex((t) => t.id === action.toast.id);
+
+      if (existingByIdIndex !== -1) {
+        return {
+          ...state,
+          toasts: state.toasts.map((t) =>
+            t.id === action.toast.id ? { ...t, ...action.toast, open: true } : t
+          ),
+        };
+      }
+
+      // 2. Duplicate Detection: Match on open state, title, description, and variant to increment badge counter
       const existingIndex = state.toasts.findIndex(
         (t) =>
           t.open &&
@@ -133,7 +154,7 @@ export const reducer = (state: State, action: Action): State => {
           open: true,
         };
 
-        // Remove old instance and push updated version to the front
+        // Move updated toast to the top of the stack
         const rest = state.toasts.filter((t) => t.id !== existing.id);
         return {
           ...state,
@@ -141,9 +162,9 @@ export const reducer = (state: State, action: Action): State => {
         };
       }
 
+      // 3. New Toast: Prepend to list and truncate at TOAST_LIMIT
       return {
         ...state,
-        // Prepend new toast and enforce maximum visible limit
         toasts: [action.toast, ...state.toasts].slice(0, TOAST_LIMIT),
       };
     }
@@ -151,7 +172,6 @@ export const reducer = (state: State, action: Action): State => {
     case "UPDATE_TOAST":
       return {
         ...state,
-        // Map through toasts and merge updated properties onto target ID
         toasts: state.toasts.map((t) =>
           t.id === action.toast.id ? { ...t, ...action.toast } : t
         ),
@@ -160,17 +180,16 @@ export const reducer = (state: State, action: Action): State => {
     case "DISMISS_TOAST": {
       const { toastId } = action;
 
-      // If a specific ID is provided, schedule removal for only that toast
+      // Queue removal for specific toast or all active toasts
       if (toastId) {
         addToRemoveQueue(toastId);
       } else {
-        // Otherwise schedule removal for all currently open toasts
         state.toasts.forEach((toast) => addToRemoveQueue(toast.id));
       }
 
+      // Mark toast as closed to trigger exit transitions
       return {
         ...state,
-        // Mark target toasts as closed to trigger CSS fade-out
         toasts: state.toasts.map((t) =>
           t.id === toastId || toastId === undefined ? { ...t, open: false } : t
         ),
@@ -178,12 +197,9 @@ export const reducer = (state: State, action: Action): State => {
     }
 
     case "REMOVE_TOAST":
-      // Clear entire array if no specific ID passed
       if (action.toastId === undefined) return { ...state, toasts: [] };
-
       return {
         ...state,
-        // Filter out target toast from state memory
         toasts: state.toasts.filter((t) => t.id !== action.toastId),
       };
 
@@ -192,33 +208,33 @@ export const reducer = (state: State, action: Action): State => {
   }
 };
 
-// Array of subscriber callbacks implementing the Observer pattern
-const listeners: Array<(state: State) => void> = [];
+// -----------------------------------------------------------------------------
+// Store Listeners & Dispatch Dispatcher
+// -----------------------------------------------------------------------------
 
-// Singleton state variable preserving toast state across entire application
+const listeners: Array<(state: State) => void> = [];
 let memoryState: State = { toasts: [] };
 
-// Dispatches actions to state and notifies all registered React hook subscribers
 function dispatch(action: Action) {
-  // Update in-memory singleton state
   memoryState = reducer(memoryState, action);
-  // Notify every mounted React component listener
   listeners.forEach((listener) => listener(memoryState));
 }
 
-// Imperative toast function callable from anywhere (inside or outside React lifecycle)
+// -----------------------------------------------------------------------------
+// Core Toast Dispatcher & Convenience Helpers
+// -----------------------------------------------------------------------------
+
+/**
+ * Base dispatcher function to spawn or update a toast alert.
+ */
 export function toast(props: ToastOptions) {
-  // Use provided ID or generate a new unique identifier
   const id = props.id || genId();
 
-  // Helper to dynamically update this specific toast
   const update = (updatedProps: ToastOptions) =>
     dispatch({ type: "UPDATE_TOAST", toast: { ...updatedProps, id } });
 
-  // Helper to dismiss this specific toast
   const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id });
 
-  // Dispatch action to push toast into visible queue
   dispatch({
     type: "ADD_TOAST",
     toast: {
@@ -230,16 +246,85 @@ export function toast(props: ToastOptions) {
     },
   });
 
-  // Return control object allowing caller to dismiss or update toast programmatically
   return { id, dismiss, update };
 }
 
-// Custom React hook subscribing components to real-time toast updates
+/** Convenience helper: Spawns a success variant toast. */
+toast.success = (title: React.ReactNode, options?: Omit<ToastOptions, "title" | "variant">) =>
+  toast({ ...options, title, variant: "success" });
+
+/** Convenience helper: Spawns an error variant toast. */
+toast.error = (title: React.ReactNode, options?: Omit<ToastOptions, "title" | "variant">) =>
+  toast({ ...options, title, variant: "error" });
+
+/** Convenience helper: Spawns a warning variant toast. */
+toast.warning = (title: React.ReactNode, options?: Omit<ToastOptions, "title" | "variant">) =>
+  toast({ ...options, title, variant: "warning" });
+
+/** Convenience helper: Spawns an informational variant toast. */
+toast.info = (title: React.ReactNode, options?: Omit<ToastOptions, "title" | "variant">) =>
+  toast({ ...options, title, variant: "info" });
+
+/** Convenience helper: Spawns a persistent loading variant toast with infinite duration. */
+toast.loading = (title: React.ReactNode, options?: Omit<ToastOptions, "title" | "variant">) =>
+  toast({ ...options, title, variant: "loading", duration: 0 });
+
+/** Global method to dismiss a specific toast by ID or all active toasts if no ID is passed. */
+toast.dismiss = (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId });
+
+/**
+ * Asynchronous promise lifecycle handler.
+ * Displays a loading state and seamlessly transitions to success or error on resolution.
+ */
+toast.promise = <T,>(
+  promise: Promise<T> | (() => Promise<T>),
+  msgs: {
+    loading: React.ReactNode;
+    success: React.ReactNode | ((data: T) => React.ReactNode);
+    error: React.ReactNode | ((err: unknown) => React.ReactNode);
+  },
+  options?: ToastOptions
+) => {
+  const instance = toast({
+    ...options,
+    variant: "loading",
+    title: msgs.loading,
+    duration: 0,
+  });
+
+  const promiseFn = typeof promise === "function" ? promise() : promise;
+
+  promiseFn
+    .then((data) => {
+      const successTitle = typeof msgs.success === "function" ? msgs.success(data) : msgs.success;
+      toast.success(successTitle, {
+        ...options,
+        id: instance.id,
+        duration: options?.duration ?? 4000,
+      });
+    })
+    .catch((err: unknown) => {
+      const errorTitle = typeof msgs.error === "function" ? msgs.error(err) : msgs.error;
+      toast.error(errorTitle, {
+        ...options,
+        id: instance.id,
+        duration: options?.duration ?? 5000,
+      });
+    });
+
+  return promiseFn;
+};
+
+// -----------------------------------------------------------------------------
+// React Consumer Hook
+// -----------------------------------------------------------------------------
+
+/**
+ * React hook providing reactive toast state, dispatchers, and dismissal handlers.
+ */
 export function useToast() {
-  // Local state synced with singleton memory state
   const [state, setState] = React.useState<State>(memoryState);
 
-  // Register listener on mount; unregister on unmount
   React.useEffect(() => {
     listeners.push(setState);
     return () => {
@@ -248,9 +333,8 @@ export function useToast() {
         listeners.splice(index, 1);
       }
     };
-  }, []); // Empty array ensures registration only happens on mount/unmount
+  }, []);
 
-  // Expose current state, trigger function, and dismiss helper
   return {
     ...state,
     toast,
