@@ -1,37 +1,25 @@
-// Type interface specifying component metadata and dependancy requirements
+// src/registry.ts
 export interface ComponentMeta {
-    // Human-readable title
-    name: string;
-    // Production npm packages requierd by this component
-    dependencies: string[];
-    // Developmemnt dependancies required by this component
-    devDependencies?: string[];
-    // File distribution mappings
-    files: {
-        // Relative path to file inside the CLI package's templates/ folder
-        templatePath: string;
-        // Filename written inside teh consumer project's components/ui folder
-        targetName: string;
-    }[];
+  name: string;
+  packageName?: string;
+  dependencies?: string[];
+  files: Array<{
+    targetName: string;
+    templatePath?: string;
+    content?: string;
+  }>;
 }
 
-// Central catalog mapping component aliases to metadata definitions
-export const REGISTRY: Record<string,ComponentMeta> = {
-    // Toast component registration
-    toast: {
-        name: "Custom Toast Notification System",
-        // Packages to automatically install in consumer project
-        dependencies: ["lucide-react", "clsx", "tailwind-merge"],
-        files: [
-            {
-                templatePath: "toast/toast.tsx",
-                targetName: "toast.tsx",
-            },
-            {
-                templatePath: "toast/use-toast.ts",
-                targetName: "use-toast.ts"
-            },
-        ],
-    },
-    // Future components (dialog, sheet, dropdown) are added here
-}
+export const REGISTRY: Record<string, ComponentMeta> = {
+  toast: {
+    name: "Toast",
+    packageName: "@canopy-ui/toast", // Your published npm package name
+    dependencies: ["lucide-react"],
+    files: [
+      {
+        targetName: "toast.tsx",
+        content: `"use client";\n\nexport * from "@canopy-ui/toast";`,
+      },
+    ],
+  },
+};
