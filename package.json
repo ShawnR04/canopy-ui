@@ -1,6 +1,6 @@
 {
   "name": "@marv3l/canopy-ui",
-  "version": "1.2.4",
+  "version": "1.2.5",
   "description": "An accessible, themable React UI component library built for fast-moving web applications.",
   "main": "./dist/index.js",
   "bin": {
