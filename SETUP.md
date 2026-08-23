@@ -943,6 +943,11 @@ npm view <your-package-name> version
 You can also check it directly on the npm website.
 
 ## Quick Update Workflow
+```bash
+git add .
+git commit -m "commit note here"
+git push
+```
 
 ```bash
 npm run build
