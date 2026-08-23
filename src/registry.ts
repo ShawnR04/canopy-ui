@@ -13,12 +13,15 @@ export interface ComponentMeta {
 export const REGISTRY: Record<string, ComponentMeta> = {
   toast: {
     name: "Toast",
-    packageName: "@canopy-ui/toast", // Your published npm package name
-    dependencies: ["lucide-react"],
+    dependencies: ["lucide-react"], // Peer dependencies to install in consumer app
     files: [
       {
         targetName: "toast.tsx",
-        content: `"use client";\n\nexport * from "@canopy-ui/toast";`,
+        templatePath: "toast/toast.tsx",
+      },
+      {
+        targetName: "use-toast.tsx",
+        templatePath: "toast/use-toast.ts",
       },
     ],
   },

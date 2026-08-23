@@ -36,28 +36,22 @@ async function detectPackageManager(projectRoot: string): Promise<"pnpm" | "yarn
  * Main execution function for adding components
  */
 export async function add(componentKeys: string[]) {
-  // Print styled welcome banner in terminal
   p.intro(pc.bgCyan(pc.black(" Canopy UI ")));
 
-  // Hold list of components to install
   let selected = componentKeys;
 
-  // If user didn't specify components in CLI args, prompt with interactive multi-select
   if (!selected || selected.length === 0) {
-    // Generate prompt choices from registered components
     const choices = Object.keys(REGISTRY).map((key) => ({
       value: key,
       label: `${REGISTRY[key]?.name ?? key} (${key})`,
     }));
 
-    // Display interactive terminal multi-select
     const response = await p.multiselect({
       message: "Select UI components to install:",
       options: choices,
       required: true,
     });
 
-    // Handle user cancellation (Ctrl+C / Esc)
     if (p.isCancel(response)) {
       p.cancel("Operation aborted.");
       process.exit(0);
@@ -65,29 +59,21 @@ export async function add(componentKeys: string[]) {
     selected = response as string[];
   }
 
-  // Get path to current user workspace
   const projectRoot = process.cwd();
-
-  // Detect project's package manager
   const pkgManager = await detectPackageManager(projectRoot);
 
-  // Target destination directory: check for src/ folder
   const hasSrc = await fs.pathExists(path.join(projectRoot, "src"));
   const targetDir = hasSrc
     ? path.join(projectRoot, "src", "components", "ui")
     : path.join(projectRoot, "components", "ui");
 
-  // Ensure the destination directory exists (create recursively if missing)
   await fs.ensureDir(targetDir);
 
-  // Initialize terminal animated progress spinner
   const spinner = p.spinner();
 
-  // Iterate over each selected component identifier
   for (const key of selected) {
     const meta = REGISTRY[key];
 
-    // Guard against invalid component keys
     if (!meta) {
       p.log.error(`Component "${key}" was not found in registry.`);
       continue;
@@ -95,7 +81,7 @@ export async function add(componentKeys: string[]) {
 
     spinner.start(`Setting up ${meta.name}...`);
 
-    // 1. Install required dependencies & package packages using the detected package manager
+    // 1. Install dependencies if any exist
     const allDependencies = [
       ...(meta.packageName ? [meta.packageName] : []),
       ...(meta.dependencies || []),
@@ -121,17 +107,17 @@ export async function add(componentKeys: string[]) {
       } catch (err) {
         spinner.stop(pc.red(`Failed to install dependencies for ${meta.name}`));
         p.log.error(String(err));
-        continue;
+        p.cancel("Installation aborted due to failed dependency resolution.");
+        process.exit(1);
       }
     }
 
-    // 2. Write the single local component wrapper / export file
-    spinner.message(`Creating component stub for ${meta.name}...`);
+    // 2. Copy template files or write stubs
+    spinner.message(`Creating component files for ${meta.name}...`);
 
     for (const file of meta.files) {
       const destPath = path.join(targetDir, file.targetName);
 
-      // If a templatePath exists on disk, copy it; otherwise write export stub
       if (file.templatePath) {
         const srcPath = path.resolve(__dirname, "../templates", file.templatePath);
         if (await fs.pathExists(srcPath)) {
@@ -139,19 +125,17 @@ export async function add(componentKeys: string[]) {
         } else {
           spinner.stop(pc.red(`Template file missing: ${file.templatePath}`));
           p.log.warn(pc.dim(`Looked at path: ${srcPath}`));
-          return;
+          p.cancel("Component generation aborted.");
+          process.exit(1);
         }
       } else if (file.content) {
-        // Direct stub writing (e.g., export * from "@canopy-ui/toast")
         await fs.writeFile(destPath, file.content.trim() + "\n", "utf-8");
       }
     }
 
-    // Mark completion for current component
     const relativePath = `${hasSrc ? "src/" : ""}components/ui/`;
     spinner.stop(pc.green(`✔ Added ${meta.name} into ${relativePath}`));
   }
 
-  // Final success message
   p.outro(pc.green("All components successfully installed!"));
 }
