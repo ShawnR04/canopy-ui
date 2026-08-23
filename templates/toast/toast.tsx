@@ -12,9 +12,21 @@ import {
 } from "lucide-react";
 
 // =============================================================================
-// TYPES & INTERFACES
+// 1. TYPES & BLUEPRINTS (Rules of the Game)
+// Think of these like the rulebook for a board game.
+// They describe what shapes, words, and colors are allowed to exist.
 // =============================================================================
 
+/** 
+ * What kind of mood is this message in?
+ * - "default": Normal neutral card
+ * - "success": Green happy card (good job!)
+ * - "error": Red alert card (something broke!)
+ * - "warning": Yellow caution card (be careful!)
+ * - "info": Blue helper card (fun fact / notice)
+ * - "custom": A blank canvas where you pick all the paint
+ * - "loading": A spinning wheel saying "hold on, I am thinking"
+ */
 export type ToastVariant =
   | "default"
   | "success"
@@ -24,6 +36,9 @@ export type ToastVariant =
   | "custom"
   | "loading";
 
+/** 
+ * Which corner of your computer or phone screen should the popups stick to?
+ */
 export type ToastPosition =
   | "top-right"
   | "bottom-right"
@@ -32,26 +47,29 @@ export type ToastPosition =
   | "top-left"
   | "bottom-left";
 
+/**
+ * This is the recipe card the developer fills out when they want to make a message pop up.
+ */
 export interface ToastOptions {
-  /** Optional custom identifier. If omitted, a collision-resistant UUID is generated. */
+  /** A unique secret name tag so we can find this exact message later. */
   id?: string;
-  /** Primary title text or JSX element displayed in the toast header. */
+  /** The big, bold title at the very top of the popup card. */
   title?: React.ReactNode;
-  /** Secondary explanatory text or JSX node rendered below the title. */
+  /** The smaller story text underneath the title that explains what happened. */
   description?: React.ReactNode;
-  /** Interactive action button or control rendered at the bottom of the toast. */
+  /** A clickable button like "Undo" or "Try Again" inside the popup. */
   action?: React.ReactNode;
-  /** Visual variant styling preset. Defaults to "default". */
+  /** Which preset color mood to use (success, error, etc.). */
   variant?: ToastVariant;
-  /** Display duration in milliseconds before auto-dismissing. Set to 0 or Infinity to prevent auto-dismiss. */
+  /** How many milliseconds to stay alive before vanishing (1000 ms = 1 second). */
   duration?: number;
-  /** Maximum number of duplicate message stacks allowed for this specific toast (defaults to 5). */
+  /** If the user clicks 100 times, only stack up to this number so the screen doesn't explode! */
   maxCount?: number;
-  /** Explicitly toggle the animated bottom progress bar. Defaults to true when auto-dismissible. */
+  /** Should we show the little colored line that shrinks as time runs out? */
   showProgress?: boolean;
-  /** Optional custom icon node to override the variant preset icon. */
+  /** A custom picture/icon if you don't want the default variant icon. */
   icon?: React.ReactNode;
-  /** Custom inline token styling overrides for background, border, text, progress bar, and icon. */
+  /** Custom paint bucket colors if you want custom background/borders. */
   customColor?: {
     bg?: string;
     text?: string;
@@ -59,47 +77,74 @@ export interface ToastOptions {
     progress?: string;
     icon?: string;
   };
-  /** Additional Tailwind or CSS class names to apply to the root toast card container. */
+  /** Extra Tailwind styling classes to decorate the card box. */
   className?: string;
 }
 
+/**
+ * The internal card data kept inside the memory vault while it sits on screen.
+ */
 export interface ToastItem extends ToastOptions {
   id: string;
   open: boolean;
+  /** How many times this identical popup was triggered in a row. */
   count: number;
+  /** True if we hit our duplicate stacking ceiling. */
   maxReached?: boolean;
+  /** The exact clock timestamp (millisecond) when this toast was created. */
+  createdAt: number;
 }
 
+/**
+ * The properties passed to the master <Toaster /> box placed in your root layout.
+ */
 export interface ToasterProps {
+  /** Default lifespan for cards in milliseconds if none is specified (4000 = 4 seconds). */
   defaultDuration?: number;
+  /** Default screen corner where cards appear. */
   position?: ToastPosition;
 }
 
 // =============================================================================
-// DYNAMIC POSITION STORE
+// 2. THE MEGAPHONE STORE (Position Radio Station)
+// This lets any button on any page change where toasts appear on screen,
+// without having to pass variables through 10 parent components.
 // =============================================================================
 
+// A VIP list of listeners holding a walkie-talkie waiting for position updates
 const positionListeners = new Set<() => void>();
 let activePositionState: ToastPosition = "top-center";
 
+/**
+ * The announcement button: Changes the corner and screams into the megaphone
+ * so every active component moves to the new spot instantly.
+ */
 export function setToastPosition(position: ToastPosition) {
   activePositionState = position;
   positionListeners.forEach((listener) => listener());
 }
 
+/**
+ * Handshake for React to listen to our position megaphone.
+ */
 function subscribePosition(callback: () => void) {
   positionListeners.add(callback);
   return () => {
+    // When the component leaves the screen, take it off the listener list
     positionListeners.delete(callback);
   };
 }
 
+/**
+ * Takes a quick snapshot photograph of what the active position currently is.
+ */
 function getPositionSnapshot(): ToastPosition {
   return activePositionState;
 }
 
 // =============================================================================
-// VARIANT STYLING CONFIGURATION
+// 3. THE COSTUME CLOSET (Variant Color & Icon Themes)
+// A dictionary that gives each variant its matching outfit (colors, icons, borders).
 // =============================================================================
 
 const variantStyles: Record<
@@ -127,6 +172,7 @@ const variantStyles: Record<
     icon: null,
   },
   success: {
+    // Happy emerald green theme with a checkmark badge
     bg: "bg-success-bg dark:bg-emerald-950/60",
     border: "border-success/40 dark:border-emerald-500/50",
     title: "text-emerald-950 dark:text-emerald-100",
@@ -138,6 +184,7 @@ const variantStyles: Record<
     icon: CheckCircle2,
   },
   error: {
+    // Red danger theme with an exclamation icon
     bg: "bg-destructive/10 dark:bg-red-950/60",
     border: "border-destructive/30 dark:border-red-500/50",
     title: "text-red-950 dark:text-red-100",
@@ -149,6 +196,7 @@ const variantStyles: Record<
     icon: AlertCircle,
   },
   warning: {
+    // Warm amber-yellow caution theme
     bg: "bg-warning-bg dark:bg-amber-950/60",
     border: "border-warning/40 dark:border-amber-500/50",
     title: "text-amber-950 dark:text-amber-100",
@@ -160,6 +208,7 @@ const variantStyles: Record<
     icon: AlertTriangle,
   },
   info: {
+    // Calming sky-blue theme
     bg: "bg-accent dark:bg-sky-950/60",
     border: "border-primary/30 dark:border-sky-500/50",
     title: "text-sky-950 dark:text-sky-100",
@@ -171,6 +220,7 @@ const variantStyles: Record<
     icon: Info,
   },
   loading: {
+    // Spinning loader theme
     bg: "bg-card dark:bg-neutral-900/95",
     border: "border-border dark:border-neutral-700/80",
     title: "text-neutral-900 dark:text-neutral-50",
@@ -184,23 +234,25 @@ const variantStyles: Record<
 };
 
 // =============================================================================
-// STATE STORE & ENGINE
+// 4. THE BRAIN / REDUCER (The Toy Box Organizer)
+// A pure calculator function that decides what to add, update, or throw away.
 // =============================================================================
 
-const TOAST_LIMIT = 5;
-const DEFAULT_MAX_COUNT = 5;
-const TOAST_REMOVE_DELAY = 0;
+const TOAST_LIMIT = 5;       // Only 5 popups allowed on screen at once
+const DEFAULT_MAX_COUNT = 5; // After 5 rapid clicks on the same popup, stop counting up
 
 type Action =
   | { type: "ADD_TOAST"; toast: ToastItem }
   | { type: "UPDATE_TOAST"; toast: Partial<ToastItem> }
-  | { type: "DISMISS_TOAST"; toastId?: string }
-  | { type: "REMOVE_TOAST"; toastId?: string };
+  | { type: "DISMISS_TOAST"; toastId?: string };
 
 interface State {
   toasts: ToastItem[];
 }
 
+/**
+ * Creates a one-of-a-kind name badge (UUID) so each toast has a unique fingerprint.
+ */
 function genId(): string {
   if (typeof crypto !== "undefined" && crypto.randomUUID) {
     return crypto.randomUUID();
@@ -208,22 +260,15 @@ function genId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
-const toastTimeouts = new Map<string, ReturnType<typeof setTimeout>>();
-
-const addToRemoveQueue = (toastId: string) => {
-  if (toastTimeouts.has(toastId)) return;
-
-  const timeout = setTimeout(() => {
-    toastTimeouts.delete(toastId);
-    dispatch({ type: "REMOVE_TOAST", toastId });
-  }, TOAST_REMOVE_DELAY);
-
-  toastTimeouts.set(toastId, timeout);
-};
-
+/**
+ * The master decision maker.
+ * Whatever action comes in, it calculates the new list of toasts and sends it out.
+ */
 export const reducer = (state: State, action: Action): State => {
   switch (action.type) {
     case "ADD_TOAST": {
+      // Step A: Did we already have a toast with this exact ID?
+      // (Like a loading spinner that just finished and wants to turn green)
       const existingByIdIndex = state.toasts.findIndex((t) => t.id === action.toast.id);
 
       if (existingByIdIndex !== -1) {
@@ -235,6 +280,9 @@ export const reducer = (state: State, action: Action): State => {
         };
       }
 
+      // Step B: Did the user click the exact same button multiple times?
+      // If the Title, Description, and Variant match, don't spawn 5 identical cards.
+      // Instead, increment the little "×2", "×3" bubble badge on the existing card!
       const existingIndex = state.toasts.findIndex(
         (t) =>
           t.open &&
@@ -249,6 +297,7 @@ export const reducer = (state: State, action: Action): State => {
         const newCount = Math.min(existing.count + 1, maxLimit);
         const maxReached = existing.count + 1 >= maxLimit;
 
+        // Build the updated stacked toast card
         const updatedToast: ToastItem = {
           ...existing,
           ...action.toast,
@@ -256,8 +305,10 @@ export const reducer = (state: State, action: Action): State => {
           count: newCount,
           maxReached,
           open: true,
+          createdAt: Date.now(), // Reset clock so the timer starts fresh
         };
 
+        // Move this updated card to the very top of the stack
         const rest = state.toasts.filter((t) => t.id !== existing.id);
         return {
           ...state,
@@ -265,6 +316,7 @@ export const reducer = (state: State, action: Action): State => {
         };
       }
 
+      // Step C: It is a brand new unique message. Put it at the front of the list.
       return {
         ...state,
         toasts: [action.toast, ...state.toasts].slice(0, TOAST_LIMIT),
@@ -272,6 +324,7 @@ export const reducer = (state: State, action: Action): State => {
     }
 
     case "UPDATE_TOAST":
+      // Look through our cards and update only the matching one
       return {
         ...state,
         toasts: state.toasts.map((t) =>
@@ -281,41 +334,40 @@ export const reducer = (state: State, action: Action): State => {
 
     case "DISMISS_TOAST": {
       const { toastId } = action;
-
+      // Instant removal: filter out the targeted card or wipe the whole tray clean
       if (toastId) {
-        addToRemoveQueue(toastId);
-      } else {
-        state.toasts.forEach((t) => addToRemoveQueue(t.id));
+        return {
+          ...state,
+          toasts: state.toasts.filter((t) => t.id !== toastId),
+        };
       }
-
       return {
         ...state,
-        toasts: state.toasts.map((t) =>
-          t.id === toastId || toastId === undefined ? { ...t, open: false } : t
-        ),
+        toasts: [],
       };
     }
-
-    case "REMOVE_TOAST":
-      if (action.toastId === undefined) return { ...state, toasts: [] };
-      return {
-        ...state,
-        toasts: state.toasts.filter((t) => t.id !== action.toastId),
-      };
 
     default:
       return state;
   }
 };
 
+// =============================================================================
+// 5. THE GLOBAL TOAST VAULT
+// Keeps track of the toasts outside of React components so any TypeScript function
+// can fire a toast without needing a React context wrapper.
+// =============================================================================
+
 const listeners = new Set<() => void>();
 let memoryState: State = { toasts: [] };
 
+/** Dispatches actions to our reducer and rings the doorbell for all listeners */
 function dispatch(action: Action) {
   memoryState = reducer(memoryState, action);
   listeners.forEach((listener) => listener());
 }
 
+/** Tells React whenever the list of toasts changes */
 function subscribe(callback: () => void) {
   listeners.add(callback);
   return () => {
@@ -323,14 +375,20 @@ function subscribe(callback: () => void) {
   };
 }
 
+/** Returns the current list of toasts stored in memory */
 function getSnapshot(): State {
   return memoryState;
 }
 
 // =============================================================================
-// DISPATCHER API & CONVENIENCE METHODS
+// 6. THE DEVELOPER REMOTE CONTROL (toast() API)
+// The functions you call in your app: toast.success("Yay!"), toast.error("Oops!").
 // =============================================================================
 
+/** 
+ * Main toast trigger: spawns a toast card on screen and gives you back tools
+ * to dismiss or update it later.
+ */
 export function toast(props: ToastOptions) {
   const id = props.id || genId();
 
@@ -347,12 +405,14 @@ export function toast(props: ToastOptions) {
       open: true,
       count: 1,
       maxReached: false,
+      createdAt: Date.now(),
     },
   });
 
   return { id, dismiss, update };
 }
 
+// Short-hand helper buttons for quick and easy coding
 toast.success = (title: React.ReactNode, options?: Omit<ToastOptions, "title" | "variant">) =>
   toast({ ...options, title, variant: "success" });
 
@@ -370,6 +430,12 @@ toast.loading = (title: React.ReactNode, options?: Omit<ToastOptions, "title" | 
 
 toast.dismiss = (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId });
 
+/**
+ * The Promise Magic Trick:
+ * 1. Shows a loading spinner popup.
+ * 2. Waits for your network request to finish.
+ * 3. Automatically transforms the card into a green checkmark on success OR a red alert on error!
+ */
 toast.promise = <T,>(
   promise: Promise<T> | (() => Promise<T>),
   msgs: {
@@ -379,6 +445,7 @@ toast.promise = <T,>(
   },
   options?: ToastOptions
 ) => {
+  // Step 1: Fire off the loading card
   const instance = toast({
     ...options,
     variant: "loading",
@@ -388,8 +455,10 @@ toast.promise = <T,>(
 
   const promiseFn = typeof promise === "function" ? promise() : promise;
 
+  // Step 2: Listen for when the task finishes
   promiseFn
     .then((data) => {
+      // Task succeeded! Turn into green success card
       const successTitle = typeof msgs.success === "function" ? msgs.success(data) : msgs.success;
       toast.success(successTitle, {
         ...options,
@@ -398,6 +467,7 @@ toast.promise = <T,>(
       });
     })
     .catch((err: unknown) => {
+      // Task failed! Turn into red error card
       const errorTitle = typeof msgs.error === "function" ? msgs.error(err) : msgs.error;
       toast.error(errorTitle, {
         ...options,
@@ -410,7 +480,8 @@ toast.promise = <T,>(
 };
 
 // =============================================================================
-// REACT CONSUMER HOOK
+// 7. REACT CONSUMER HOOK
+// Connects React components to the memory vault safely without tearing or lag.
 // =============================================================================
 
 export function useToast() {
@@ -425,19 +496,25 @@ export function useToast() {
 }
 
 // =============================================================================
-// UI COMPONENTS (TOASTER & TOAST ELEMENT)
+// 8. THE MASTER STAGE (<Toaster />)
+// The transparent container positioned in the corner of your browser.
+// It draws the animations in CSS and maps over all active cards.
 // =============================================================================
 
 export function Toaster({ defaultDuration = 4000, position }: ToasterProps) {
   const { toasts, dismiss } = useToast();
+
+  // Listen to position changes across the entire app
   const storePosition = React.useSyncExternalStore(
     subscribePosition,
     getPositionSnapshot,
     (): ToastPosition => "top-center"
   );
 
+  // If someone hardcoded <Toaster position="..." />, prioritize that over the store
   const activePosition: ToastPosition = position ?? storePosition;
 
+  // Map each position corner to its exact CSS layout coordinates
   const positionClasses: Record<ToastPosition, string> = {
     "top-right": "top-4 right-4 items-end",
     "top-left": "top-4 left-4 items-start",
@@ -449,32 +526,38 @@ export function Toaster({ defaultDuration = 4000, position }: ToasterProps) {
 
   return (
     <>
+      {/* Cartoon Animation Keyframes (CSS physics for slides, shakes, and pops) */}
       <style>{`
-        /* Progress & Description animations */
+        /* Shrinks the bottom timer bar from 100% width down to 0% width */
         @keyframes toast-progress {
           from { transform: scaleX(1); }
           to { transform: scaleX(0); }
         }
+        /* Smoothly opens the description drawer like a rolling window shade */
         @keyframes toast-expand {
           from { grid-template-rows: 0fr; }
           to { grid-template-rows: 1fr; }
         }
+        /* Gently fades in the description text */
         @keyframes toast-fade-in {
           from { opacity: 0; transform: translateY(-4px); }
           to { opacity: 1; transform: translateY(0); }
         }
+        /* Springy rubber-band pop for the duplicate counter badge (×2) */
         @keyframes toast-pop {
           0% { transform: scale(0.6); }
           50% { transform: scale(1.2); }
           100% { transform: scale(1); }
         }
+        /* Shakes left and right when you hit the maximum stack count */
         @keyframes toast-shake {
           0%, 100% { transform: translateX(0); }
           25% { transform: translateX(-2px); }
           75% { transform: translateX(2px); }
         }
 
-        /* Directional Pop-in Animations */
+        /* DIRECTIONAL ENTRANCE PHYSICS */
+        /* Slides in from the right edge with a tiny spring bounce */
         @keyframes toast-slide-in-right {
           0% {
             opacity: 0;
@@ -489,6 +572,7 @@ export function Toaster({ defaultDuration = 4000, position }: ToasterProps) {
           }
         }
 
+        /* Slides in from the left edge */
         @keyframes toast-slide-in-left {
           0% {
             opacity: 0;
@@ -503,6 +587,7 @@ export function Toaster({ defaultDuration = 4000, position }: ToasterProps) {
           }
         }
 
+        /* Drops down from the top ceiling */
         @keyframes toast-slide-in-top {
           0% {
             opacity: 0;
@@ -517,6 +602,7 @@ export function Toaster({ defaultDuration = 4000, position }: ToasterProps) {
           }
         }
 
+        /* Shoots up from the bottom floor */
         @keyframes toast-slide-in-bottom {
           0% {
             opacity: 0;
@@ -532,6 +618,7 @@ export function Toaster({ defaultDuration = 4000, position }: ToasterProps) {
         }
       `}</style>
 
+      {/* The invisible box pinned to the screen corner */}
       <div
         className={`fixed z-50 pointer-events-none flex flex-col gap-2 p-4 w-full max-w-sm transition-all duration-300 ease-out ${positionClasses[activePosition]}`}
       >
@@ -549,6 +636,12 @@ export function Toaster({ defaultDuration = 4000, position }: ToasterProps) {
   );
 }
 
+// =============================================================================
+// 9. THE INDIVIDUAL TOAST CARD (<ToastElement />)
+// The physical card on screen that counts down, listens for mouse hovers,
+// handles dismissal, and renders your buttons.
+// =============================================================================
+
 function ToastElement({
   toast,
   position,
@@ -560,58 +653,70 @@ function ToastElement({
   defaultDuration: number;
   onDismiss: () => void;
 }) {
-  const isAutoDismissible = toast.variant !== "loading" && (toast.duration === undefined || toast.duration > 0);
+  // A loading spinner never vanishes automatically; others vanish after their timer runs out
+  const isAutoDismissible =
+    toast.variant !== "loading" && (toast.duration === undefined || toast.duration > 0);
   const activeDuration = toast.duration ?? defaultDuration;
   const showProgress = toast.showProgress ?? isAutoDismissible;
 
+  // STOPWATCH REFS & STATES
   const [isPaused, setIsPaused] = React.useState(false);
   const remainingTimeRef = React.useRef<number>(activeDuration);
   const startTimeRef = React.useRef<number>(0);
-  const timerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onDismissRef = React.useRef(onDismiss);
 
+  // Always keep the freshest dismiss callback without triggering unnecessary re-renders
+  React.useEffect(() => {
+    onDismissRef.current = onDismiss;
+  }, [onDismiss]);
+
+  // If a new duration or duplicate stack event happens, reset our stopwatch
   React.useEffect(() => {
     remainingTimeRef.current = activeDuration;
-  }, [toast.variant, toast.title, toast.count, activeDuration]);
+  }, [toast.id, toast.count, activeDuration]);
 
+  // THE DEATH TIMER EFFECT:
+  // Starts a countdown. When it hits 0, it calls onDismiss() to remove itself from the screen.
   React.useEffect(() => {
-    if (!isAutoDismissible || isPaused) {
-      if (timerRef.current) clearTimeout(timerRef.current);
-      return;
-    }
+    if (!isAutoDismissible || isPaused) return;
 
     startTimeRef.current = Date.now();
-    timerRef.current = setTimeout(() => {
-      onDismiss();
+    const timer = setTimeout(() => {
+      onDismissRef.current();
     }, remainingTimeRef.current);
 
+    // If the component unmounts or pauses, stop the ticking timer immediately
     return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
+      clearTimeout(timer);
     };
-  }, [isAutoDismissible, isPaused, toast.variant, toast.title, toast.count, activeDuration, onDismiss]);
+  }, [isAutoDismissible, isPaused, toast.id, toast.count, toast.createdAt]);
 
+  // When your mouse hovers over the card, FREEZE the countdown stopwatch so you have time to read it
   const handleMouseEnter = () => {
     if (!isAutoDismissible) return;
-    if (timerRef.current) clearTimeout(timerRef.current);
     const elapsed = Date.now() - startTimeRef.current;
     remainingTimeRef.current = Math.max(remainingTimeRef.current - elapsed, 0);
     setIsPaused(true);
   };
 
+  // When your mouse moves away, UNFREEZE the stopwatch and resume counting down
   const handleMouseLeave = () => {
     if (!isAutoDismissible) return;
     setIsPaused(false);
   };
 
+  // Pick the outfit styles and icon for this card's mood
   const variant = toast.variant || "default";
   const defaultStyle = variantStyles[variant] || variantStyles.default;
   const IconComponent = toast.icon !== undefined ? null : defaultStyle.icon;
 
+  // Apply any custom inline color overrides passed by the developer
   const customInlineStyle: React.CSSProperties = {};
   if (toast.customColor?.bg) customInlineStyle.backgroundColor = toast.customColor.bg;
   if (toast.customColor?.border) customInlineStyle.borderColor = toast.customColor.border;
   if (toast.customColor?.text) customInlineStyle.color = toast.customColor.text;
 
-  // Directional animation resolution
+  // Pick the directional slide-in animation matching whichever corner this card was born in
   const animationMap: Record<ToastPosition, string> = {
     "top-right": "toast-slide-in-right 320ms cubic-bezier(0.16, 1, 0.3, 1) forwards",
     "bottom-right": "toast-slide-in-right 320ms cubic-bezier(0.16, 1, 0.3, 1) forwards",
@@ -623,6 +728,7 @@ function ToastElement({
 
   customInlineStyle.animation = animationMap[position] || animationMap["top-center"];
 
+  // Helper flags so Tailwind default classes don't fight with custom user classes
   const userHasBg = Boolean(toast.customColor?.bg || toast.className?.match(/(?:^|\s)bg-/));
   const userHasBorder = Boolean(toast.customColor?.border || toast.className?.match(/(?:^|\s)border-/));
   const userHasText = Boolean(toast.customColor?.text || toast.className?.match(/(?:^|\s)text-/));
@@ -640,6 +746,7 @@ function ToastElement({
         !userHasBg ? defaultStyle.bg : ""
       } ${!userHasBorder ? defaultStyle.border : ""} ${toast.className || ""}`}
     >
+      {/* 1. The Left Icon */}
       {toast.icon !== undefined ? (
         <div className="shrink-0 mt-0.5">{toast.icon}</div>
       ) : (
@@ -651,9 +758,10 @@ function ToastElement({
         )
       )}
 
-      {/* Toast Content Area */}
+      {/* 2. Middle Content Area (Title, Description, Counter, and Buttons) */}
       <div className="flex-1 text-sm">
         <div className="flex items-center gap-2">
+          {/* Main Title */}
           {toast.title && (
             <div
               className={`font-semibold leading-tight tracking-tight ${
@@ -664,7 +772,7 @@ function ToastElement({
             </div>
           )}
 
-          {/* Duplication Counter / Max Badge */}
+          {/* Duplication Badge (Shows "×2", "×3", etc. when clicked repeatedly) */}
           {toast.count > 1 && (
             <span
               key={`${toast.count}-${toast.maxReached}`}
@@ -682,6 +790,7 @@ function ToastElement({
           )}
         </div>
 
+        {/* Expandable Story Description Box */}
         {toast.description && (
           <div
             className="grid overflow-hidden"
@@ -705,9 +814,11 @@ function ToastElement({
           </div>
         )}
 
+        {/* Custom Interactive Action Button Area (e.g., "Undo" button) */}
         {toast.action && <div className="pt-2">{toast.action}</div>}
       </div>
 
+      {/* 3. The Close "X" Button */}
       <button
         onClick={onDismiss}
         aria-label="Close toast"
@@ -716,7 +827,7 @@ function ToastElement({
         <X className="w-4 h-4" />
       </button>
 
-      {/* Progress Bar */}
+      {/* 4. The Bottom Countdown Progress Bar (shrinks down as time ticks away) */}
       {showProgress && isAutoDismissible && (
         <div
           key={`${toast.id}-${toast.variant}-${toast.count}`}
@@ -726,7 +837,7 @@ function ToastElement({
           style={{
             backgroundColor: toast.customColor?.progress,
             animation: `toast-progress ${activeDuration}ms linear forwards`,
-            animationPlayState: isPaused ? "paused" : "running",
+            animationPlayState: isPaused ? "paused" : "running", // Pauses when your mouse is hovering!
           }}
         />
       )}
