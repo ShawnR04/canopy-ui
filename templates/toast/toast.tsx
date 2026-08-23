@@ -181,12 +181,10 @@ function ToastElement({
   const startTimeRef = React.useRef<number>(0);
   const timerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Update remaining ref on prop changes without triggering synchronous setState re-renders
   React.useEffect(() => {
     remainingTimeRef.current = activeDuration;
   }, [toast.variant, toast.title, toast.count, activeDuration]);
 
-  // Handle countdown timeout
   React.useEffect(() => {
     if (!isAutoDismissible || isPaused) {
       if (timerRef.current) clearTimeout(timerRef.current);
@@ -225,8 +223,10 @@ function ToastElement({
   if (toast.customColor?.border) customInlineStyle.borderColor = toast.customColor.border;
   if (toast.customColor?.text) customInlineStyle.color = toast.customColor.text;
 
+  // Check if custom colors or custom tailwind classes exist
   const userHasBg = Boolean(toast.customColor?.bg || toast.className?.match(/(?:^|\s)bg-/));
   const userHasBorder = Boolean(toast.customColor?.border || toast.className?.match(/(?:^|\s)border-/));
+  const userHasText = Boolean(toast.customColor?.text || toast.className?.match(/(?:^|\s)text-/));
 
   const isError = variant === "error";
 
@@ -246,7 +246,7 @@ function ToastElement({
       ) : (
         IconComponent && (
           <IconComponent
-            className={`w-5 h-5 mt-0.5 shrink-0 ${defaultStyle.iconColor}`}
+            className={`w-5 h-5 mt-0.5 shrink-0 ${!toast.customColor?.icon ? defaultStyle.iconColor : ""}`}
             style={{ color: toast.customColor?.icon }}
           />
         )
@@ -256,7 +256,11 @@ function ToastElement({
       <div className="flex-1 text-sm">
         <div className="flex items-center gap-2">
           {toast.title && (
-            <div className={`font-semibold leading-tight tracking-tight ${defaultStyle.title}`}>
+            <div
+              className={`font-semibold leading-tight tracking-tight ${
+                !userHasText ? defaultStyle.title : ""
+              }`}
+            >
               {toast.title}
             </div>
           )}
@@ -289,7 +293,9 @@ function ToastElement({
           >
             <div className="overflow-hidden">
               <div
-                className={`leading-relaxed text-xs pt-1 opacity-0 font-normal ${defaultStyle.description}`}
+                className={`leading-relaxed text-xs pt-1 opacity-0 font-normal ${
+                  !userHasText ? defaultStyle.description : "opacity-90"
+                }`}
                 style={{
                   animation: "toast-fade-in 200ms ease-out 250ms forwards",
                 }}
@@ -306,7 +312,7 @@ function ToastElement({
       <button
         onClick={onDismiss}
         aria-label="Close toast"
-        className="p-1 rounded-md opacity-70 hover:opacity-100 hover:bg-neutral-500/15 dark:hover:bg-white/10 transition-colors text-neutral-500 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white"
+        className="p-1 rounded-md opacity-70 hover:opacity-100 hover:bg-neutral-500/15 dark:hover:bg-white/10 transition-colors text-inherit"
       >
         <X className="w-4 h-4" />
       </button>
