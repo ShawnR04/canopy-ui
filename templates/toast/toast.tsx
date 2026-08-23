@@ -24,6 +24,14 @@ export type ToastVariant =
   | "custom"
   | "loading";
 
+export type ToastPosition =
+  | "top-right"
+  | "bottom-right"
+  | "top-center"
+  | "bottom-center"
+  | "top-left"
+  | "bottom-left";
+
 export interface ToastOptions {
   /** Optional custom identifier. If omitted, a collision-resistant UUID is generated. */
   id?: string;
@@ -64,13 +72,30 @@ export interface ToastItem extends ToastOptions {
 
 export interface ToasterProps {
   defaultDuration?: number;
-  position?:
-    | "top-right"
-    | "bottom-right"
-    | "top-center"
-    | "bottom-center"
-    | "top-left"
-    | "bottom-left";
+  position?: ToastPosition;
+}
+
+// =============================================================================
+// DYNAMIC POSITION STORE
+// =============================================================================
+
+const positionListeners = new Set<() => void>();
+let activePositionState: ToastPosition = "top-center";
+
+export function setToastPosition(position: ToastPosition) {
+  activePositionState = position;
+  positionListeners.forEach((listener) => listener());
+}
+
+function subscribePosition(callback: () => void) {
+  positionListeners.add(callback);
+  return () => {
+    positionListeners.delete(callback);
+  };
+}
+
+function getPositionSnapshot(): ToastPosition {
+  return activePositionState;
 }
 
 // =============================================================================
@@ -283,12 +308,23 @@ export const reducer = (state: State, action: Action): State => {
   }
 };
 
-const listeners: Array<(state: State) => void> = [];
+const listeners = new Set<() => void>();
 let memoryState: State = { toasts: [] };
 
 function dispatch(action: Action) {
   memoryState = reducer(memoryState, action);
-  listeners.forEach((listener) => listener(memoryState));
+  listeners.forEach((listener) => listener());
+}
+
+function subscribe(callback: () => void) {
+  listeners.add(callback);
+  return () => {
+    listeners.delete(callback);
+  };
+}
+
+function getSnapshot(): State {
+  return memoryState;
 }
 
 // =============================================================================
@@ -378,21 +414,12 @@ toast.promise = <T,>(
 // =============================================================================
 
 export function useToast() {
-  const [state, setState] = React.useState<State>(memoryState);
-
-  React.useEffect(() => {
-    listeners.push(setState);
-    return () => {
-      const index = listeners.indexOf(setState);
-      if (index > -1) {
-        listeners.splice(index, 1);
-      }
-    };
-  }, []);
+  const state = React.useSyncExternalStore(subscribe, getSnapshot, () => memoryState);
 
   return {
     ...state,
     toast,
+    setToastPosition,
     dismiss: (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId }),
   };
 }
@@ -401,8 +428,15 @@ export function useToast() {
 // UI COMPONENTS (TOASTER & TOAST ELEMENT)
 // =============================================================================
 
-export function Toaster({ defaultDuration = 4000, position = "top-center" }: ToasterProps) {
+export function Toaster({ defaultDuration = 4000, position }: ToasterProps) {
   const { toasts, dismiss } = useToast();
+  const storePosition = React.useSyncExternalStore(
+    subscribePosition,
+    getPositionSnapshot,
+    () => "top-center"
+  );
+
+  const activePosition = position ?? storePosition;
 
   const positionClasses = {
     "top-right": "top-4 right-4 items-end",
@@ -411,7 +445,7 @@ export function Toaster({ defaultDuration = 4000, position = "top-center" }: Toa
     "bottom-left": "bottom-4 left-4 items-start",
     "top-center": "top-4 left-1/2 -translate-x-1/2 items-center",
     "bottom-center": "bottom-4 left-1/2 -translate-x-1/2 items-center",
-  }[position];
+  }[activePosition];
 
   return (
     <>
@@ -440,7 +474,9 @@ export function Toaster({ defaultDuration = 4000, position = "top-center" }: Toa
         }
       `}</style>
 
-      <div className={`fixed z-50 pointer-events-none flex flex-col gap-2 p-4 w-full max-w-sm ${positionClasses}`}>
+      <div
+        className={`fixed z-50 pointer-events-none flex flex-col gap-2 p-4 w-full max-w-sm transition-all duration-300 ease-out ${positionClasses}`}
+      >
         {toasts.map((item) => (
           <ToastElement
             key={item.id}
