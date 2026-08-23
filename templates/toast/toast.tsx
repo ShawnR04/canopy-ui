@@ -433,23 +433,24 @@ export function Toaster({ defaultDuration = 4000, position }: ToasterProps) {
   const storePosition = React.useSyncExternalStore(
     subscribePosition,
     getPositionSnapshot,
-    () => "top-center"
+    (): ToastPosition => "top-center"
   );
 
-  const activePosition = position ?? storePosition;
+  const activePosition: ToastPosition = position ?? storePosition;
 
-  const positionClasses = {
+  const positionClasses: Record<ToastPosition, string> = {
     "top-right": "top-4 right-4 items-end",
     "top-left": "top-4 left-4 items-start",
     "bottom-right": "bottom-4 right-4 items-end",
     "bottom-left": "bottom-4 left-4 items-start",
     "top-center": "top-4 left-1/2 -translate-x-1/2 items-center",
     "bottom-center": "bottom-4 left-1/2 -translate-x-1/2 items-center",
-  }[activePosition];
+  };
 
   return (
     <>
       <style>{`
+        /* Progress & Description animations */
         @keyframes toast-progress {
           from { transform: scaleX(1); }
           to { transform: scaleX(0); }
@@ -472,15 +473,73 @@ export function Toaster({ defaultDuration = 4000, position }: ToasterProps) {
           25% { transform: translateX(-2px); }
           75% { transform: translateX(2px); }
         }
+
+        /* Directional Pop-in Animations */
+        @keyframes toast-slide-in-right {
+          0% {
+            opacity: 0;
+            transform: translate3d(100%, 0, 0) scale(0.9);
+          }
+          70% {
+            transform: translate3d(-4px, 0, 0) scale(1.01);
+          }
+          100% {
+            opacity: 1;
+            transform: translate3d(0, 0, 0) scale(1);
+          }
+        }
+
+        @keyframes toast-slide-in-left {
+          0% {
+            opacity: 0;
+            transform: translate3d(-100%, 0, 0) scale(0.9);
+          }
+          70% {
+            transform: translate3d(4px, 0, 0) scale(1.01);
+          }
+          100% {
+            opacity: 1;
+            transform: translate3d(0, 0, 0) scale(1);
+          }
+        }
+
+        @keyframes toast-slide-in-top {
+          0% {
+            opacity: 0;
+            transform: translate3d(0, -100%, 0) scale(0.9);
+          }
+          70% {
+            transform: translate3d(0, 4px, 0) scale(1.01);
+          }
+          100% {
+            opacity: 1;
+            transform: translate3d(0, 0, 0) scale(1);
+          }
+        }
+
+        @keyframes toast-slide-in-bottom {
+          0% {
+            opacity: 0;
+            transform: translate3d(0, 100%, 0) scale(0.9);
+          }
+          70% {
+            transform: translate3d(0, -4px, 0) scale(1.01);
+          }
+          100% {
+            opacity: 1;
+            transform: translate3d(0, 0, 0) scale(1);
+          }
+        }
       `}</style>
 
       <div
-        className={`fixed z-50 pointer-events-none flex flex-col gap-2 p-4 w-full max-w-sm transition-all duration-300 ease-out ${positionClasses}`}
+        className={`fixed z-50 pointer-events-none flex flex-col gap-2 p-4 w-full max-w-sm transition-all duration-300 ease-out ${positionClasses[activePosition]}`}
       >
         {toasts.map((item) => (
           <ToastElement
             key={item.id}
             toast={item}
+            position={activePosition}
             defaultDuration={defaultDuration}
             onDismiss={() => dismiss(item.id)}
           />
@@ -492,10 +551,12 @@ export function Toaster({ defaultDuration = 4000, position }: ToasterProps) {
 
 function ToastElement({
   toast,
+  position,
   defaultDuration,
   onDismiss,
 }: {
   toast: ToastItem;
+  position: ToastPosition;
   defaultDuration: number;
   onDismiss: () => void;
 }) {
@@ -550,6 +611,18 @@ function ToastElement({
   if (toast.customColor?.border) customInlineStyle.borderColor = toast.customColor.border;
   if (toast.customColor?.text) customInlineStyle.color = toast.customColor.text;
 
+  // Directional animation resolution
+  const animationMap: Record<ToastPosition, string> = {
+    "top-right": "toast-slide-in-right 320ms cubic-bezier(0.16, 1, 0.3, 1) forwards",
+    "bottom-right": "toast-slide-in-right 320ms cubic-bezier(0.16, 1, 0.3, 1) forwards",
+    "top-left": "toast-slide-in-left 320ms cubic-bezier(0.16, 1, 0.3, 1) forwards",
+    "bottom-left": "toast-slide-in-left 320ms cubic-bezier(0.16, 1, 0.3, 1) forwards",
+    "top-center": "toast-slide-in-top 320ms cubic-bezier(0.16, 1, 0.3, 1) forwards",
+    "bottom-center": "toast-slide-in-bottom 320ms cubic-bezier(0.16, 1, 0.3, 1) forwards",
+  };
+
+  customInlineStyle.animation = animationMap[position] || animationMap["top-center"];
+
   const userHasBg = Boolean(toast.customColor?.bg || toast.className?.match(/(?:^|\s)bg-/));
   const userHasBorder = Boolean(toast.customColor?.border || toast.className?.match(/(?:^|\s)border-/));
   const userHasText = Boolean(toast.customColor?.text || toast.className?.match(/(?:^|\s)text-/));
@@ -563,7 +636,7 @@ function ToastElement({
       style={customInlineStyle}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
-      className={`pointer-events-auto relative overflow-hidden flex items-start gap-3 w-full p-4 rounded-[var(--radius-lg,0.625rem)] border shadow-xl dark:shadow-2xl dark:shadow-black/70 dark:ring-1 dark:ring-white/10 backdrop-blur-md transition-all duration-300 ease-out ${
+      className={`pointer-events-auto relative overflow-hidden flex items-start gap-3 w-full p-4 rounded-[var(--radius-lg,0.625rem)] border shadow-xl dark:shadow-2xl dark:shadow-black/70 dark:ring-1 dark:ring-white/10 backdrop-blur-md will-change-transform ${
         !userHasBg ? defaultStyle.bg : ""
       } ${!userHasBorder ? defaultStyle.border : ""} ${toast.className || ""}`}
     >
@@ -614,7 +687,7 @@ function ToastElement({
             className="grid overflow-hidden"
             style={{
               gridTemplateRows: "0fr",
-              animation: "toast-expand 250ms cubic-bezier(0.16, 1, 0.3, 1) 250ms forwards",
+              animation: "toast-expand 250ms cubic-bezier(0.16, 1, 0.3, 1) 200ms forwards",
             }}
           >
             <div className="overflow-hidden">
@@ -623,7 +696,7 @@ function ToastElement({
                   !userHasText ? defaultStyle.description : "opacity-90"
                 }`}
                 style={{
-                  animation: "toast-fade-in 200ms ease-out 250ms forwards",
+                  animation: "toast-fade-in 200ms ease-out 200ms forwards",
                 }}
               >
                 {toast.description}
