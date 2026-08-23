@@ -19,10 +19,6 @@ export const REGISTRY: Record<string, ComponentMeta> = {
         targetName: "toast.tsx",
         templatePath: "toast/toast.tsx",
       },
-      {
-        targetName: "use-toast.tsx",
-        templatePath: "toast/use-toast.ts",
-      },
     ],
   },
 };

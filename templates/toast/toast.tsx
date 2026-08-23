@@ -1,13 +1,81 @@
 "use client";
 
 import * as React from "react";
-import { CheckCircle2, AlertCircle, AlertTriangle, Info, Loader2, X, LucideIcon } from "lucide-react";
-import { useToast, ToastItem } from "./use-toast";
+import {
+  CheckCircle2,
+  AlertCircle,
+  AlertTriangle,
+  Info,
+  Loader2,
+  X,
+  type LucideIcon,
+} from "lucide-react";
+
+// =============================================================================
+// TYPES & INTERFACES
+// =============================================================================
+
+export type ToastVariant =
+  | "default"
+  | "success"
+  | "error"
+  | "warning"
+  | "info"
+  | "custom"
+  | "loading";
+
+export interface ToastOptions {
+  /** Optional custom identifier. If omitted, a collision-resistant UUID is generated. */
+  id?: string;
+  /** Primary title text or JSX element displayed in the toast header. */
+  title?: React.ReactNode;
+  /** Secondary explanatory text or JSX node rendered below the title. */
+  description?: React.ReactNode;
+  /** Interactive action button or control rendered at the bottom of the toast. */
+  action?: React.ReactNode;
+  /** Visual variant styling preset. Defaults to "default". */
+  variant?: ToastVariant;
+  /** Display duration in milliseconds before auto-dismissing. Set to 0 or Infinity to prevent auto-dismiss. */
+  duration?: number;
+  /** Maximum number of duplicate message stacks allowed for this specific toast (defaults to 5). */
+  maxCount?: number;
+  /** Explicitly toggle the animated bottom progress bar. Defaults to true when auto-dismissible. */
+  showProgress?: boolean;
+  /** Optional custom icon node to override the variant preset icon. */
+  icon?: React.ReactNode;
+  /** Custom inline token styling overrides for background, border, text, progress bar, and icon. */
+  customColor?: {
+    bg?: string;
+    text?: string;
+    border?: string;
+    progress?: string;
+    icon?: string;
+  };
+  /** Additional Tailwind or CSS class names to apply to the root toast card container. */
+  className?: string;
+}
+
+export interface ToastItem extends ToastOptions {
+  id: string;
+  open: boolean;
+  count: number;
+  maxReached?: boolean;
+}
 
 export interface ToasterProps {
   defaultDuration?: number;
-  position?: "top-right" | "bottom-right" | "top-center" | "bottom-center" | "top-left" | "bottom-left";
+  position?:
+    | "top-right"
+    | "bottom-right"
+    | "top-center"
+    | "bottom-center"
+    | "top-left"
+    | "bottom-left";
 }
+
+// =============================================================================
+// VARIANT STYLING CONFIGURATION
+// =============================================================================
 
 const variantStyles: Record<
   string,
@@ -29,7 +97,8 @@ const variantStyles: Record<
     description: "text-neutral-600 dark:text-neutral-200",
     progress: "bg-neutral-900/20 dark:bg-neutral-400",
     iconColor: "text-neutral-700 dark:text-neutral-300",
-    badge: "bg-neutral-200 text-neutral-800 dark:bg-neutral-800 dark:text-neutral-100 border-neutral-300 dark:border-neutral-700",
+    badge:
+      "bg-neutral-200 text-neutral-800 dark:bg-neutral-800 dark:text-neutral-100 border-neutral-300 dark:border-neutral-700",
     icon: null,
   },
   success: {
@@ -39,7 +108,8 @@ const variantStyles: Record<
     description: "text-emerald-800 dark:text-emerald-200/90",
     progress: "bg-emerald-600 dark:bg-emerald-400",
     iconColor: "text-emerald-600 dark:text-emerald-400",
-    badge: "bg-emerald-100 text-emerald-900 dark:bg-emerald-900/80 dark:text-emerald-100 border-emerald-300 dark:border-emerald-700",
+    badge:
+      "bg-emerald-100 text-emerald-900 dark:bg-emerald-900/80 dark:text-emerald-100 border-emerald-300 dark:border-emerald-700",
     icon: CheckCircle2,
   },
   error: {
@@ -49,7 +119,8 @@ const variantStyles: Record<
     description: "text-red-800 dark:text-red-200/90",
     progress: "bg-destructive dark:bg-red-400",
     iconColor: "text-red-600 dark:text-red-400",
-    badge: "bg-red-100 text-red-900 dark:bg-red-900/80 dark:text-red-100 border-red-300 dark:border-red-700",
+    badge:
+      "bg-red-100 text-red-900 dark:bg-red-900/80 dark:text-red-100 border-red-300 dark:border-red-700",
     icon: AlertCircle,
   },
   warning: {
@@ -59,7 +130,8 @@ const variantStyles: Record<
     description: "text-amber-800 dark:text-amber-200/90",
     progress: "bg-amber-600 dark:bg-amber-400",
     iconColor: "text-amber-600 dark:text-amber-400",
-    badge: "bg-amber-100 text-amber-900 dark:bg-amber-900/80 dark:text-amber-100 border-amber-300 dark:border-amber-700",
+    badge:
+      "bg-amber-100 text-amber-900 dark:bg-amber-900/80 dark:text-amber-100 border-amber-300 dark:border-amber-700",
     icon: AlertTriangle,
   },
   info: {
@@ -69,7 +141,8 @@ const variantStyles: Record<
     description: "text-sky-800 dark:text-sky-200/90",
     progress: "bg-primary dark:bg-sky-400",
     iconColor: "text-sky-600 dark:text-sky-400",
-    badge: "bg-sky-100 text-sky-900 dark:bg-sky-900/80 dark:text-sky-100 border-sky-300 dark:border-sky-700",
+    badge:
+      "bg-sky-100 text-sky-900 dark:bg-sky-900/80 dark:text-sky-100 border-sky-300 dark:border-sky-700",
     icon: Info,
   },
   loading: {
@@ -79,10 +152,254 @@ const variantStyles: Record<
     description: "text-neutral-600 dark:text-neutral-200",
     progress: "bg-primary dark:bg-sky-400",
     iconColor: "text-primary dark:text-sky-400 animate-spin",
-    badge: "bg-neutral-200 text-neutral-800 dark:bg-neutral-800 dark:text-neutral-100 border-neutral-300 dark:border-neutral-700",
+    badge:
+      "bg-neutral-200 text-neutral-800 dark:bg-neutral-800 dark:text-neutral-100 border-neutral-300 dark:border-neutral-700",
     icon: Loader2,
   },
 };
+
+// =============================================================================
+// STATE STORE & ENGINE
+// =============================================================================
+
+const TOAST_LIMIT = 5;
+const DEFAULT_MAX_COUNT = 5;
+const TOAST_REMOVE_DELAY = 0;
+
+type Action =
+  | { type: "ADD_TOAST"; toast: ToastItem }
+  | { type: "UPDATE_TOAST"; toast: Partial<ToastItem> }
+  | { type: "DISMISS_TOAST"; toastId?: string }
+  | { type: "REMOVE_TOAST"; toastId?: string };
+
+interface State {
+  toasts: ToastItem[];
+}
+
+function genId(): string {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+}
+
+const toastTimeouts = new Map<string, ReturnType<typeof setTimeout>>();
+
+const addToRemoveQueue = (toastId: string) => {
+  if (toastTimeouts.has(toastId)) return;
+
+  const timeout = setTimeout(() => {
+    toastTimeouts.delete(toastId);
+    dispatch({ type: "REMOVE_TOAST", toastId });
+  }, TOAST_REMOVE_DELAY);
+
+  toastTimeouts.set(toastId, timeout);
+};
+
+export const reducer = (state: State, action: Action): State => {
+  switch (action.type) {
+    case "ADD_TOAST": {
+      const existingByIdIndex = state.toasts.findIndex((t) => t.id === action.toast.id);
+
+      if (existingByIdIndex !== -1) {
+        return {
+          ...state,
+          toasts: state.toasts.map((t) =>
+            t.id === action.toast.id ? { ...t, ...action.toast, open: true } : t
+          ),
+        };
+      }
+
+      const existingIndex = state.toasts.findIndex(
+        (t) =>
+          t.open &&
+          t.title === action.toast.title &&
+          t.description === action.toast.description &&
+          (t.variant || "default") === (action.toast.variant || "default")
+      );
+
+      if (existingIndex !== -1) {
+        const existing = state.toasts[existingIndex];
+        const maxLimit = existing.maxCount ?? action.toast.maxCount ?? DEFAULT_MAX_COUNT;
+        const newCount = Math.min(existing.count + 1, maxLimit);
+        const maxReached = existing.count + 1 >= maxLimit;
+
+        const updatedToast: ToastItem = {
+          ...existing,
+          ...action.toast,
+          id: existing.id,
+          count: newCount,
+          maxReached,
+          open: true,
+        };
+
+        const rest = state.toasts.filter((t) => t.id !== existing.id);
+        return {
+          ...state,
+          toasts: [updatedToast, ...rest].slice(0, TOAST_LIMIT),
+        };
+      }
+
+      return {
+        ...state,
+        toasts: [action.toast, ...state.toasts].slice(0, TOAST_LIMIT),
+      };
+    }
+
+    case "UPDATE_TOAST":
+      return {
+        ...state,
+        toasts: state.toasts.map((t) =>
+          t.id === action.toast.id ? { ...t, ...action.toast } : t
+        ),
+      };
+
+    case "DISMISS_TOAST": {
+      const { toastId } = action;
+
+      if (toastId) {
+        addToRemoveQueue(toastId);
+      } else {
+        state.toasts.forEach((t) => addToRemoveQueue(t.id));
+      }
+
+      return {
+        ...state,
+        toasts: state.toasts.map((t) =>
+          t.id === toastId || toastId === undefined ? { ...t, open: false } : t
+        ),
+      };
+    }
+
+    case "REMOVE_TOAST":
+      if (action.toastId === undefined) return { ...state, toasts: [] };
+      return {
+        ...state,
+        toasts: state.toasts.filter((t) => t.id !== action.toastId),
+      };
+
+    default:
+      return state;
+  }
+};
+
+const listeners: Array<(state: State) => void> = [];
+let memoryState: State = { toasts: [] };
+
+function dispatch(action: Action) {
+  memoryState = reducer(memoryState, action);
+  listeners.forEach((listener) => listener(memoryState));
+}
+
+// =============================================================================
+// DISPATCHER API & CONVENIENCE METHODS
+// =============================================================================
+
+export function toast(props: ToastOptions) {
+  const id = props.id || genId();
+
+  const update = (updatedProps: ToastOptions) =>
+    dispatch({ type: "UPDATE_TOAST", toast: { ...updatedProps, id } });
+
+  const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id });
+
+  dispatch({
+    type: "ADD_TOAST",
+    toast: {
+      ...props,
+      id,
+      open: true,
+      count: 1,
+      maxReached: false,
+    },
+  });
+
+  return { id, dismiss, update };
+}
+
+toast.success = (title: React.ReactNode, options?: Omit<ToastOptions, "title" | "variant">) =>
+  toast({ ...options, title, variant: "success" });
+
+toast.error = (title: React.ReactNode, options?: Omit<ToastOptions, "title" | "variant">) =>
+  toast({ ...options, title, variant: "error" });
+
+toast.warning = (title: React.ReactNode, options?: Omit<ToastOptions, "title" | "variant">) =>
+  toast({ ...options, title, variant: "warning" });
+
+toast.info = (title: React.ReactNode, options?: Omit<ToastOptions, "title" | "variant">) =>
+  toast({ ...options, title, variant: "info" });
+
+toast.loading = (title: React.ReactNode, options?: Omit<ToastOptions, "title" | "variant">) =>
+  toast({ ...options, title, variant: "loading", duration: 0 });
+
+toast.dismiss = (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId });
+
+toast.promise = <T,>(
+  promise: Promise<T> | (() => Promise<T>),
+  msgs: {
+    loading: React.ReactNode;
+    success: React.ReactNode | ((data: T) => React.ReactNode);
+    error: React.ReactNode | ((err: unknown) => React.ReactNode);
+  },
+  options?: ToastOptions
+) => {
+  const instance = toast({
+    ...options,
+    variant: "loading",
+    title: msgs.loading,
+    duration: 0,
+  });
+
+  const promiseFn = typeof promise === "function" ? promise() : promise;
+
+  promiseFn
+    .then((data) => {
+      const successTitle = typeof msgs.success === "function" ? msgs.success(data) : msgs.success;
+      toast.success(successTitle, {
+        ...options,
+        id: instance.id,
+        duration: options?.duration ?? 4000,
+      });
+    })
+    .catch((err: unknown) => {
+      const errorTitle = typeof msgs.error === "function" ? msgs.error(err) : msgs.error;
+      toast.error(errorTitle, {
+        ...options,
+        id: instance.id,
+        duration: options?.duration ?? 5000,
+      });
+    });
+
+  return promiseFn;
+};
+
+// =============================================================================
+// REACT CONSUMER HOOK
+// =============================================================================
+
+export function useToast() {
+  const [state, setState] = React.useState<State>(memoryState);
+
+  React.useEffect(() => {
+    listeners.push(setState);
+    return () => {
+      const index = listeners.indexOf(setState);
+      if (index > -1) {
+        listeners.splice(index, 1);
+      }
+    };
+  }, []);
+
+  return {
+    ...state,
+    toast,
+    dismiss: (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId }),
+  };
+}
+
+// =============================================================================
+// UI COMPONENTS (TOASTER & TOAST ELEMENT)
+// =============================================================================
 
 export function Toaster({ defaultDuration = 4000, position = "top-center" }: ToasterProps) {
   const { toasts, dismiss } = useToast();
@@ -100,52 +417,26 @@ export function Toaster({ defaultDuration = 4000, position = "top-center" }: Toa
     <>
       <style>{`
         @keyframes toast-progress {
-          from {
-            transform: scaleX(1);
-          }
-          to {
-            transform: scaleX(0);
-          }
+          from { transform: scaleX(1); }
+          to { transform: scaleX(0); }
         }
         @keyframes toast-expand {
-          from {
-            grid-template-rows: 0fr;
-          }
-          to {
-            grid-template-rows: 1fr;
-          }
+          from { grid-template-rows: 0fr; }
+          to { grid-template-rows: 1fr; }
         }
         @keyframes toast-fade-in {
-          from {
-            opacity: 0;
-            transform: translateY(-4px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
+          from { opacity: 0; transform: translateY(-4px); }
+          to { opacity: 1; transform: translateY(0); }
         }
         @keyframes toast-pop {
-          0% {
-            transform: scale(0.6);
-          }
-          50% {
-            transform: scale(1.2);
-          }
-          100% {
-            transform: scale(1);
-          }
+          0% { transform: scale(0.6); }
+          50% { transform: scale(1.2); }
+          100% { transform: scale(1); }
         }
         @keyframes toast-shake {
-          0%, 100% {
-            transform: translateX(0);
-          }
-          25% {
-            transform: translateX(-2px);
-          }
-          75% {
-            transform: translateX(2px);
-          }
+          0%, 100% { transform: translateX(0); }
+          25% { transform: translateX(-2px); }
+          75% { transform: translateX(2px); }
         }
       `}</style>
 
@@ -223,7 +514,6 @@ function ToastElement({
   if (toast.customColor?.border) customInlineStyle.borderColor = toast.customColor.border;
   if (toast.customColor?.text) customInlineStyle.color = toast.customColor.text;
 
-  // Check if custom colors or custom tailwind classes exist
   const userHasBg = Boolean(toast.customColor?.bg || toast.className?.match(/(?:^|\s)bg-/));
   const userHasBorder = Boolean(toast.customColor?.border || toast.className?.match(/(?:^|\s)border-/));
   const userHasText = Boolean(toast.customColor?.text || toast.className?.match(/(?:^|\s)text-/));
@@ -317,7 +607,7 @@ function ToastElement({
         <X className="w-4 h-4" />
       </button>
 
-      {/* Progress Bar resets animation on each state change */}
+      {/* Progress Bar */}
       {showProgress && isAutoDismissible && (
         <div
           key={`${toast.id}-${toast.variant}-${toast.count}`}
