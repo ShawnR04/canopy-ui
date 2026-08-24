@@ -1,30 +1,37 @@
 # Toast Usage
 
-The Canopy UI Toast component provides a flexible notification system for React and Next.js applications.
+This guide covers how to use the `toast` component after adding it to your project with Canopy UI.
 
-## Add the Toast Component
+The component includes a complete toast system in one file, including the `Toaster` component, `toast` API, `useToast` hook, variants, promise handling, positioning, custom styling, progress bars, duplicate handling, and loading states.
 
-First, add the Toast component to your project:
+## 1. Add the Component
+
+Install the toast component using the Canopy UI CLI:
 
 ```bash
-npx canopy-ui add toast
+npx @marv3l/canopy-ui add toast
 ```
 
-Render the `Toaster` once in your application layout.
+This adds the toast component source code directly to your project.
+
+## 2. Add the Toaster
+
+Place the `<Toaster />` component once near the root of your application.
+
+For a Next.js application, you can add it to your root layout:
 
 ```tsx
-import { Toaster } from "@/components/ui/toaster";
+import { Toaster } from "@/components/ui/toast";
 
 export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode;
-}) {
+}>) {
   return (
     <html lang="en">
       <body>
         {children}
-
         <Toaster />
       </body>
     </html>
@@ -32,74 +39,81 @@ export default function RootLayout({
 }
 ```
 
-Then import `toast` wherever you want to trigger notifications.
+The `Toaster` accepts a default duration and a position. By default, toasts remain visible for `4000ms` and appear at the top center of the screen.
+
+### Custom Defaults
 
 ```tsx
-import { toast } from "@/components/ui/use-toast";
+<Toaster
+  defaultDuration={5000}
+  position="top-right"
+/>
 ```
 
----
+Available positions:
 
-## Basic Toast
+```tsx
+type ToastPosition =
+  | "top-right"
+  | "bottom-right"
+  | "top-center"
+  | "bottom-center"
+  | "top-left"
+  | "bottom-left";
+```
 
-Create a standard toast with a title.
+## 3. Import `toast`
+
+Import the toast API anywhere you need to trigger a notification:
+
+```tsx
+import { toast } from "@/components/ui/toast";
+```
+
+Then trigger a toast:
 
 ```tsx
 toast({
-  title: "Changes saved",
+  title: "Notification",
+  description: "This is a default toast.",
 });
 ```
 
-You can also add a description.
+## 4. Success Toast
+
+Use `toast.success()` for successful actions:
 
 ```tsx
-toast({
-  title: "Changes saved",
-  description: "Your profile has been updated successfully.",
+toast.success("Changes saved");
+```
+
+You can also include a description:
+
+```tsx
+toast.success("Profile updated", {
+  description: "Your changes have been saved successfully.",
 });
 ```
 
----
+## 5. Error Toast
 
-## Success Toast
-
-Use `toast.success()` for successful actions.
-
-```tsx
-toast.success("Payment successful");
-```
-
-With a description:
-
-```tsx
-toast.success("Payment successful", {
-  description: "Your transaction has been completed.",
-});
-```
-
----
-
-## Error Toast
-
-Use `toast.error()` when something goes wrong.
+Use `toast.error()` when an action fails:
 
 ```tsx
 toast.error("Something went wrong");
 ```
 
-With additional information:
+With additional details:
 
 ```tsx
-toast.error("Failed to save changes", {
-  description: "Please try again in a moment.",
+toast.error("Unable to save changes", {
+  description: "Please try again in a few moments.",
 });
 ```
 
----
+## 6. Warning Toast
 
-## Warning Toast
-
-Use `toast.warning()` to notify users about something that requires attention.
+Use `toast.warning()` to notify users about something requiring attention:
 
 ```tsx
 toast.warning("Unsaved changes");
@@ -107,245 +121,150 @@ toast.warning("Unsaved changes");
 
 ```tsx
 toast.warning("Storage almost full", {
-  description: "Consider deleting files you no longer need.",
+  description: "Consider removing files you no longer need.",
 });
 ```
 
----
+## 7. Info Toast
 
-## Info Toast
-
-Use `toast.info()` for general information.
+Use `toast.info()` for helpful information:
 
 ```tsx
 toast.info("New update available");
 ```
 
 ```tsx
-toast.info("Welcome back", {
-  description: "You have 3 new notifications.",
+toast.info("Maintenance scheduled", {
+  description: "The application will be temporarily unavailable tonight.",
 });
 ```
 
----
+## 8. Loading Toast
 
-## Loading Toast
-
-Loading toasts stay visible until they are updated or dismissed.
+Use `toast.loading()` for actions that are still in progress:
 
 ```tsx
-toast.loading("Uploading your files...");
+const loadingToast = toast.loading("Uploading file");
 ```
 
-You can store the returned toast instance and dismiss it later.
+Loading toasts do not automatically disappear. You can dismiss them manually:
 
 ```tsx
-const notification = toast.loading("Uploading your files...");
+const loadingToast = toast.loading("Uploading file");
 
-// Your async operation
+// Complete your operation
 
-notification.dismiss();
+loadingToast.dismiss();
 ```
 
----
+You can also update the toast when the operation finishes:
 
-## Custom Duration
+```tsx
+const loadingToast = toast.loading("Uploading file");
 
-Set how long a toast remains visible using `duration`.
+setTimeout(() => {
+  loadingToast.update({
+    title: "Upload complete",
+    variant: "success",
+    duration: 4000,
+  });
+}, 2000);
+```
 
-The value is in milliseconds.
+## 9. Promise Toasts
+
+Use `toast.promise()` to automatically transition from a loading state to either a success or error state.
+
+```tsx
+toast.promise(saveProfile(), {
+  loading: "Saving profile...",
+  success: "Profile saved successfully",
+  error: "Unable to save profile",
+});
+```
+
+You can also use the resolved data:
+
+```tsx
+toast.promise(createUser(), {
+  loading: "Creating account...",
+  success: (user) => `Welcome, ${user.name}`,
+  error: "Unable to create your account",
+});
+```
+
+The promise toast creates a loading notification first, then updates the same toast when the promise resolves or rejects.
+
+## 10. Custom Duration
+
+Set a custom duration for an individual toast:
 
 ```tsx
 toast.success("Changes saved", {
-  duration: 3000,
+  duration: 8000,
 });
 ```
 
-Keep a toast visible indefinitely by setting the duration to `0`.
+Durations are measured in milliseconds.
 
 ```tsx
-toast({
-  title: "This notification stays open",
-  duration: 0,
-});
-```
-
----
-
-## Configure Global Duration
-
-Set a default duration for all auto-dismissible toasts through the `Toaster`.
-
-```tsx
-<Toaster defaultDuration={5000} />
-```
-
-Individual toast durations can still override this value.
-
-```tsx
-toast.success("Saved", {
+toast.info("Quick notification", {
   duration: 2000,
 });
 ```
 
----
-
-## Toast Positions
-
-The `Toaster` supports six positions.
+To keep a non-loading toast visible until it is manually dismissed, use:
 
 ```tsx
-<Toaster position="top-right" />
+toast({
+  title: "Important message",
+  description: "This toast will remain visible.",
+  duration: 0,
+});
 ```
 
-Available positions:
+## 11. Hide the Progress Bar
+
+By default, automatically dismissible toasts display a progress bar.
+
+Disable it with `showProgress`:
 
 ```tsx
-"top-right"
-"top-left"
-"top-center"
-"bottom-right"
-"bottom-left"
-"bottom-center"
-```
-
-Example:
-
-```tsx
-<Toaster
-  position="bottom-right"
-  defaultDuration={4000}
-/>
-```
-
----
-
-## Progress Bar
-
-Auto-dismissible toasts display a progress bar by default.
-
-You can disable it for an individual toast.
-
-```tsx
-toast.success("Saved successfully", {
+toast.success("Changes saved", {
   showProgress: false,
 });
 ```
 
-You can explicitly enable it as well.
+## 12. Add a Custom Icon
 
-```tsx
-toast.info("Processing request", {
-  showProgress: true,
-});
-```
-
----
-
-## Custom Colors
-
-Customize the toast using `customColor`.
-
-```tsx
-toast({
-  title: "Custom notification",
-  description: "This toast uses custom colors.",
-  customColor: {
-    bg: "#18181b",
-    text: "#ffffff",
-    border: "#3f3f46",
-    progress: "#8b5cf6",
-    icon: "#a78bfa",
-  },
-});
-```
-
-You can customize only the values you need.
-
-```tsx
-toast.success("Project deployed", {
-  customColor: {
-    bg: "var(--primary)",
-    progress: "var(--accent)",
-  },
-});
-```
-
-CSS variables and design tokens can also be used.
-
-```tsx
-toast({
-  title: "Theme notification",
-  customColor: {
-    bg: "var(--card)",
-    text: "var(--foreground)",
-    border: "var(--border)",
-  },
-});
-```
-
----
-
-## Custom Tailwind Classes
-
-Use `className` to apply your own Tailwind classes.
-
-```tsx
-toast({
-  title: "Custom styled toast",
-  className: "rounded-2xl shadow-2xl",
-});
-```
-
-You can override the background and border as well.
-
-```tsx
-toast({
-  title: "Important notification",
-  className: "bg-purple-600 border-purple-400 text-white",
-});
-```
-
----
-
-## Custom Icons
-
-Override the default variant icon by passing your own React element.
-
-```tsx
-import { Rocket } from "lucide-react";
-
-toast({
-  title: "Deployment complete",
-  icon: <Rocket className="h-5 w-5" />,
-});
-```
-
-You can also combine custom icons with semantic variants.
+You can provide your own React element as the toast icon:
 
 ```tsx
 import { Bell } from "lucide-react";
 
-toast.success("New notification", {
+toast({
+  title: "New notification",
+  description: "You have a new message.",
   icon: <Bell className="h-5 w-5" />,
 });
 ```
 
----
+Providing an icon replaces the default icon for the selected variant.
 
-## Toast Actions
+## 13. Add an Action
 
-Add an interactive action to a toast.
+Use `action` to add custom interactive content to a toast:
 
 ```tsx
 toast({
-  title: "File deleted",
-  description: "The file has been moved to the trash.",
+  title: "Item deleted",
+  description: "The item has been moved to the trash.",
   action: (
     <button
       onClick={() => {
         console.log("Undo deletion");
       }}
+      className="text-sm font-medium underline"
     >
       Undo
     </button>
@@ -353,289 +272,451 @@ toast({
 });
 ```
 
-Example with Tailwind styling:
+You can use any valid React element for the action.
+
+## 14. Custom Colors
+
+Use `customColor` to override the toast colors.
 
 ```tsx
-toast.success("Profile updated", {
-  description: "Your changes have been saved.",
-  action: (
-    <button className="text-sm font-medium underline">
-      View Profile
-    </button>
-  ),
+toast({
+  title: "Custom toast",
+  description: "This toast uses custom colors.",
+  customColor: {
+    bg: "#18181b",
+    text: "#ffffff",
+    border: "#3f3f46",
+    progress: "#22c55e",
+    icon: "#22c55e",
+  },
 });
 ```
 
----
+Available color options:
 
-## Duplicate Toast Handling
+| Property   | Description            |
+| ---------- | ---------------------- |
+| `bg`       | Toast background color |
+| `text`     | Text color             |
+| `border`   | Border color           |
+| `progress` | Progress bar color     |
+| `icon`     | Default icon color     |
 
-Identical active toasts are automatically grouped together instead of creating unlimited duplicate notifications.
-
-For example:
-
-```tsx
-toast.error("Failed to connect");
-toast.error("Failed to connect");
-toast.error("Failed to connect");
-```
-
-The toast will display a duplicate count.
-
-You can control the maximum count for a specific toast.
+You can use hex values, CSS variables, or other valid CSS color values:
 
 ```tsx
-toast.error("Failed to connect", {
-  maxCount: 3,
+toast({
+  title: "Custom theme",
+  customColor: {
+    bg: "var(--card)",
+    text: "var(--foreground)",
+    border: "var(--primary)",
+    progress: "var(--primary)",
+  },
 });
 ```
 
----
+## 15. Custom Tailwind Classes
 
-## Dismiss a Specific Toast
+Use `className` to apply additional styling:
 
-The base `toast()` function returns an instance containing the toast ID and dismissal methods.
+```tsx
+toast.success("Deployment complete", {
+  className: "rounded-2xl shadow-2xl",
+});
+```
+
+You can also override background, border, and text utility classes:
+
+```tsx
+toast({
+  title: "Custom styled toast",
+  description: "Styled with Tailwind utilities.",
+  className:
+    "bg-violet-600 border-violet-500 text-white rounded-xl shadow-xl",
+});
+```
+
+## 16. Dynamic Positioning
+
+You can change the toast position globally with `setToastPosition()`:
+
+```tsx
+import {
+  setToastPosition,
+  toast,
+} from "@/components/ui/toast";
+
+setToastPosition("bottom-right");
+
+toast.success("Position updated");
+```
+
+For example, a user preference setting could control where future toasts appear:
+
+```tsx
+const positions = [
+  "top-right",
+  "bottom-right",
+  "top-center",
+  "bottom-center",
+  "top-left",
+  "bottom-left",
+] as const;
+
+function handlePositionChange(
+  position: (typeof positions)[number]
+) {
+  setToastPosition(position);
+
+  toast.success("Toast position updated");
+}
+```
+
+If the `<Toaster />` receives a `position` prop directly, that position takes priority over the global position state.
+
+## 17. Dismiss a Specific Toast
+
+Every call to `toast()` returns an object containing the toast ID, `dismiss()`, and `update()` functions.
 
 ```tsx
 const notification = toast({
-  title: "Processing...",
+  title: "Processing request",
   duration: 0,
 });
 
 notification.dismiss();
 ```
 
----
-
-## Update an Existing Toast
-
-Use the returned `update()` method to update a toast.
+You can also dismiss a toast using its ID:
 
 ```tsx
 const notification = toast({
-  title: "Uploading...",
-  description: "Please wait.",
-  duration: 0,
-});
-
-// Later...
-
-notification.update({
-  title: "Upload complete",
-  description: "Your file was uploaded successfully.",
-  variant: "success",
-  duration: 4000,
-});
-```
-
----
-
-## Dismiss by ID
-
-You can dismiss a toast globally using its ID.
-
-```tsx
-const notification = toast({
-  title: "Processing...",
+  title: "Processing request",
   duration: 0,
 });
 
 toast.dismiss(notification.id);
 ```
 
----
+## 18. Dismiss All Toasts
 
-## Dismiss All Toasts
-
-Call `toast.dismiss()` without an ID to dismiss every active toast.
+Call `toast.dismiss()` without an ID to remove every active toast:
 
 ```tsx
 toast.dismiss();
 ```
 
----
+## 19. Update a Toast
 
-## Promise Toasts
-
-Use `toast.promise()` to automatically manage loading, success, and error states for an asynchronous operation.
+Create a toast and update it later:
 
 ```tsx
-toast.promise(
-  fetch("/api/profile"),
-  {
-    loading: "Saving your changes...",
-    success: "Changes saved successfully",
-    error: "Failed to save changes",
-  }
-);
+const notification = toast({
+  title: "Uploading file",
+  description: "Please wait...",
+  variant: "loading",
+  duration: 0,
+});
+
+setTimeout(() => {
+  notification.update({
+    title: "Upload complete",
+    description: "Your file is ready.",
+    variant: "success",
+    duration: 4000,
+  });
+}, 3000);
 ```
 
-You can also pass a function that returns a promise.
+You can also use a fixed ID to update the same toast by triggering another toast with that ID:
 
 ```tsx
-toast.promise(
-  async () => {
-    const response = await fetch("/api/profile");
+toast({
+  id: "upload-status",
+  title: "Uploading file",
+  variant: "loading",
+  duration: 0,
+});
 
-    if (!response.ok) {
-      throw new Error("Request failed");
-    }
-
-    return response.json();
-  },
-  {
-    loading: "Updating profile...",
-    success: "Profile updated successfully",
-    error: "Unable to update your profile",
-  }
-);
+toast.success("Upload complete", {
+  id: "upload-status",
+  description: "Your file has been uploaded.",
+});
 ```
 
----
+## 20. Prevent Excessive Duplicate Toasts
 
-## Promise Toasts with Response Data
-
-The success message can use the resolved promise data.
+When the same toast is triggered repeatedly, identical active toasts are grouped together instead of endlessly creating new cards.
 
 ```tsx
-toast.promise(
-  fetch("/api/user").then((response) => response.json()),
-  {
-    loading: "Loading user...",
-    success: (user) => `Welcome back, ${user.name}`,
-    error: "Failed to load user",
-  }
-);
+toast.success("Saved");
+toast.success("Saved");
+toast.success("Saved");
 ```
 
-The error message can also receive the error.
+The toast will display a count indicating how many times the same notification was triggered.
+
+You can control the maximum duplicate count:
 
 ```tsx
-toast.promise(
-  saveChanges(),
-  {
-    loading: "Saving changes...",
-    success: "Changes saved",
-    error: (error) =>
-      error instanceof Error
-        ? error.message
-        : "Something went wrong",
-  }
-);
+toast.success("Saved", {
+  maxCount: 3,
+});
 ```
 
----
+The component also limits the total number of visible toast cards.
+
+## 21. Using `useToast`
+
+The `useToast()` hook gives React components access to the current toast state and toast controls.
+
+```tsx
+"use client";
+
+import { useToast } from "@/components/ui/toast";
+
+export function ToastControls() {
+  const {
+    toasts,
+    toast,
+    dismiss,
+    setToastPosition,
+  } = useToast();
+
+  return (
+    <div>
+      <button
+        onClick={() =>
+          toast.success("Hello from useToast")
+        }
+      >
+        Show Toast
+      </button>
+
+      <button
+        onClick={() => dismiss()}
+      >
+        Dismiss All
+      </button>
+
+      <button
+        onClick={() => setToastPosition("bottom-right")}
+      >
+        Move Toasts
+      </button>
+
+      <p>Active toasts: {toasts.length}</p>
+    </div>
+  );
+}
+```
+
+The hook exposes the active toast state, the `toast` API, global position controls, and a dismiss function.
+
+## 22. Available Variants
+
+The toast component supports the following variants:
+
+```tsx
+type ToastVariant =
+  | "default"
+  | "success"
+  | "error"
+  | "warning"
+  | "info"
+  | "custom"
+  | "loading";
+```
+
+Examples:
+
+```tsx
+toast({
+  title: "Default toast",
+  variant: "default",
+});
+
+toast.success("Success toast");
+
+toast.error("Error toast");
+
+toast.warning("Warning toast");
+
+toast.info("Information toast");
+
+toast.loading("Loading toast");
+```
 
 ## Complete Example
 
 ```tsx
 "use client";
 
-import { toast } from "@/components/ui/use-toast";
-import { Button } from "@/components/ui/button";
+import {
+  Toaster,
+  toast,
+} from "@/components/ui/toast";
 
-export function ToastExamples() {
+export default function ToastExample() {
   return (
-    <div className="flex flex-wrap gap-3">
-      <Button
-        onClick={() =>
-          toast({
-            title: "Default toast",
-            description: "This is a standard notification.",
-          })
-        }
-      >
-        Default
-      </Button>
+    <>
+      <div className="flex flex-wrap gap-3">
+        <button
+          onClick={() =>
+            toast.success("Changes saved", {
+              description: "Your settings have been updated.",
+            })
+          }
+        >
+          Success
+        </button>
 
-      <Button
-        onClick={() =>
-          toast.success("Success!", {
-            description: "Your changes were saved successfully.",
-          })
-        }
-      >
-        Success
-      </Button>
+        <button
+          onClick={() =>
+            toast.error("Something went wrong", {
+              description: "Please try again.",
+            })
+          }
+        >
+          Error
+        </button>
 
-      <Button
-        onClick={() =>
-          toast.error("Error", {
-            description: "Something went wrong. Please try again.",
-          })
-        }
-      >
-        Error
-      </Button>
+        <button
+          onClick={() =>
+            toast.warning("Unsaved changes")
+          }
+        >
+          Warning
+        </button>
 
-      <Button
-        onClick={() =>
-          toast.warning("Warning", {
-            description: "You have unsaved changes.",
-          })
-        }
-      >
-        Warning
-      </Button>
+        <button
+          onClick={() =>
+            toast.info("New update available")
+          }
+        >
+          Info
+        </button>
 
-      <Button
-        onClick={() =>
-          toast.info("Information", {
-            description: "A new version is available.",
-          })
-        }
-      >
-        Info
-      </Button>
+        <button
+          onClick={() =>
+            toast.loading("Processing request")
+          }
+        >
+          Loading
+        </button>
 
-      <Button
-        onClick={() =>
-          toast.loading("Processing your request...")
-        }
-      >
-        Loading
-      </Button>
-    </div>
+        <button
+          onClick={() =>
+            toast({
+              title: "Custom toast",
+              description: "Fully customizable notification.",
+              customColor: {
+                bg: "#18181b",
+                text: "#ffffff",
+                border: "#3f3f46",
+                progress: "#22c55e",
+              },
+            })
+          }
+        >
+          Custom
+        </button>
+      </div>
+
+      <Toaster />
+    </>
   );
 }
 ```
 
-## Available Methods
+## API Reference
 
-| Method              | Description                                             |
-| ------------------- | ------------------------------------------------------- |
-| `toast()`           | Create a fully customizable toast                       |
-| `toast.success()`   | Create a success toast                                  |
-| `toast.error()`     | Create an error toast                                   |
-| `toast.warning()`   | Create a warning toast                                  |
-| `toast.info()`      | Create an informational toast                           |
-| `toast.loading()`   | Create a persistent loading toast                       |
-| `toast.promise()`   | Handle loading, success, and error states for a promise |
-| `toast.dismiss(id)` | Dismiss a specific toast                                |
-| `toast.dismiss()`   | Dismiss all active toasts                               |
-
-## Available Toast Options
-
-| Option         | Type           | Description                                                |
-| -------------- | -------------- | ---------------------------------------------------------- |
-| `title`        | `ReactNode`    | Main toast content                                         |
-| `description`  | `ReactNode`    | Secondary descriptive content                              |
-| `action`       | `ReactNode`    | Custom interactive action                                  |
-| `variant`      | `ToastVariant` | Visual toast style                                         |
-| `duration`     | `number`       | Display time in milliseconds                               |
-| `maxCount`     | `number`       | Maximum duplicate count                                    |
-| `showProgress` | `boolean`      | Show or hide the progress bar                              |
-| `icon`         | `ReactNode`    | Custom toast icon                                          |
-| `customColor`  | `object`       | Custom background, text, border, progress, and icon colors |
-| `className`    | `string`       | Additional Tailwind or CSS classes                         |
-
-### Supported Variants
+### `Toaster`
 
 ```tsx
-"default"
-"success"
-"error"
-"warning"
-"info"
-"loading"
+<Toaster
+  defaultDuration={4000}
+  position="top-center"
+/>
 ```
+
+| Prop              | Type            | Default        | Description                              |
+| ----------------- | --------------- | -------------- | ---------------------------------------- |
+| `defaultDuration` | `number`        | `4000`         | Default display duration in milliseconds |
+| `position`        | `ToastPosition` | `"top-center"` | Default toast position                   |
+
+### `toast(options)`
+
+```tsx
+toast({
+  id: "optional-id",
+  title: "Toast title",
+  description: "Toast description",
+  variant: "success",
+  duration: 4000,
+  maxCount: 5,
+  showProgress: true,
+  icon: <Icon />,
+  action: <button>Undo</button>,
+  customColor: {},
+  className: "",
+});
+```
+
+| Option         | Description                                                |
+| -------------- | ---------------------------------------------------------- |
+| `id`           | Optional unique toast ID                                   |
+| `title`        | Main toast content                                         |
+| `description`  | Secondary descriptive content                              |
+| `action`       | Custom React content displayed below the description       |
+| `variant`      | Toast visual variant                                       |
+| `duration`     | Display duration in milliseconds                           |
+| `maxCount`     | Maximum duplicate count                                    |
+| `showProgress` | Controls the progress bar                                  |
+| `icon`         | Custom React icon                                          |
+| `customColor`  | Custom background, text, border, progress, and icon colors |
+| `className`    | Additional Tailwind classes                                |
+
+### Helper Methods
+
+```tsx
+toast.success("Success");
+
+toast.error("Error");
+
+toast.warning("Warning");
+
+toast.info("Information");
+
+toast.loading("Loading");
+
+toast.dismiss();
+
+toast.promise(promise, {
+  loading: "Loading...",
+  success: "Completed",
+  error: "Failed",
+});
+```
+
+### `useToast()`
+
+```tsx
+const {
+  toasts,
+  toast,
+  setToastPosition,
+  dismiss,
+} = useToast();
+```
+
+## Notes
+
+* Add `<Toaster />` once near the root of your application.
+* Import and call `toast` from client-side interactive code.
+* Loading toasts remain visible until they are dismissed or updated.
+* Toast timers pause while the user hovers over an automatically dismissible toast.
+* Use `toast.promise()` for async operations that need loading, success, and error feedback.
+* Use `id` values when you need to update an existing toast instead of creating a new one.
+* Use `customColor` or `className` when the built-in variants do not match your design system.
