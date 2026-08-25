@@ -1,0 +1,39 @@
+// src/templates/theme.ts
+export const CANOPY_THEME_CSS = `
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
+    --border: 240 5.9% 90%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+    --accent: 240 4.8% 95.9%;
+    --primary: 217 91% 60%;
+    --destructive: 0 84.2% 60.2%;
+    --success: 142 76% 36%;
+    --success-bg: 142 76% 96%;
+    --warning: 38 92% 50%;
+    --warning-bg: 48 96% 96%;
+    --radius-lg: 0.625rem;
+  }
+
+  .dark {
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 240 10% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --border: 240 3.7% 15.9%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+    --accent: 240 3.7% 15.9%;
+    --primary: 217 91% 60%;
+    --destructive: 0 62.8% 30.6%;
+    --success: 142 70% 45%;
+    --success-bg: 160 84% 6%;
+    --warning: 38 92% 50%;
+    --warning-bg: 35 92% 8%;
+  }
+}
+`;

@@ -13,9 +13,15 @@ import pc from "picocolors";
 // Component registry index
 import { REGISTRY } from "../registry.js";
 
-// Derive current directory path in ES Module environment
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// Derive current directory path safely in both ES Module and CommonJS environments
+const getDirname = () => {
+  if (typeof __dirname !== "undefined") {
+    return __dirname;
+  }
+  return path.dirname(fileURLToPath(import.meta.url));
+};
+
+const currentDir = getDirname();
 
 /**
  * Detects the active package manager used in the target project workspace
@@ -119,7 +125,8 @@ export async function add(componentKeys: string[]) {
       const destPath = path.join(targetDir, file.targetName);
 
       if (file.templatePath) {
-        const srcPath = path.resolve(__dirname, "../templates", file.templatePath);
+        // Resolve path relative to the bundle execution context
+        const srcPath = path.resolve(currentDir, "../templates", file.templatePath);
         if (await fs.pathExists(srcPath)) {
           await fs.copy(srcPath, destPath, { overwrite: true });
         } else {
