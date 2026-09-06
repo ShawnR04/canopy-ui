@@ -1,0 +1,3820 @@
+This file is a merged representation of the entire codebase, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of the entire repository's contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+.github/
+  workflows/
+    publish.yml
+public/
+  favicon.ico
+src/
+  cli/
+    index.ts
+  commands/
+    add.ts
+  templates/
+    button/
+      button.tsx
+    toast/
+      toast.tsx
+      use-toast.ts
+    theme.ts
+  index.ts
+  registry.ts
+.gitattributes
+.gitignore
+CHANGELOG.md
+LICENSE
+package.json
+README.md
+SETUP.md
+tsconfig.json
+tsup.config.ts
+USAGE.md
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path="src/cli/index.ts">
+#!/usr/bin/env node
+import fs from "node:fs";
+import path from "node:path";
+import { Command } from "commander";
+import { CANOPY_THEME_CSS } from "../templates/theme.js";
+import { add } from "../commands/add.js";
+
+const program = new Command();
+
+program
+  .name("canopy-ui")
+  .description("CLI to initialize Canopy UI and add components to your React or Next.js app")
+  .version("1.3.2");
+
+// ==========================================
+// 1. INIT COMMAND
+// ==========================================
+program
+  .command("init")
+  .description("Inject theme variables and configure Tailwind CSS")
+  .action(async () => {
+    const cwd = process.cwd();
+
+    // 1. Find the user's globals.css file
+    const cssCandidates = [
+      path.join(cwd, "app/globals.css"),
+      path.join(cwd, "src/app/globals.css"),
+      path.join(cwd, "styles/globals.css"),
+      path.join(cwd, "src/styles/globals.css"),
+      path.join(cwd, "src/index.css"),
+    ];
+
+    const targetCss = cssCandidates.find((p) => fs.existsSync(p));
+
+    if (!targetCss) {
+      console.log("\x1b[31m%s\x1b[0m", "✖ Could not locate your globals.css file.");
+      return;
+    }
+
+    let cssContent = fs.readFileSync(targetCss, "utf-8");
+
+    // 2. Inject CSS variables if not already present
+    if (cssContent.includes("--success-bg") || cssContent.includes("--radius-lg")) {
+      console.log(
+        "\x1b[33m%s\x1b[0m",
+        `ℹ Canopy UI theme variables already present in ${path.relative(cwd, targetCss)}`
+      );
+    } else {
+      cssContent += `\n${CANOPY_THEME_CSS}\n`;
+      fs.writeFileSync(targetCss, cssContent, "utf-8");
+      console.log(
+        "\x1b[32m%s\x1b[0m",
+        `✔ Added Canopy UI theme tokens to ${path.relative(cwd, targetCss)}`
+      );
+    }
+
+    // 3. Find and update tailwind.config
+    const configCandidates = [
+      path.join(cwd, "tailwind.config.ts"),
+      path.join(cwd, "tailwind.config.js"),
+      path.join(cwd, "tailwind.config.mjs"),
+    ];
+
+    const targetConfig = configCandidates.find((p) => fs.existsSync(p));
+
+    if (targetConfig) {
+      let configContent = fs.readFileSync(targetConfig, "utf-8");
+      const canopyDistPath = `"./node_modules/@marv3l/canopy-ui/**/*.{js,ts,jsx,tsx}"`;
+
+      if (!configContent.includes("@marv3l/canopy-ui")) {
+        // Inject package dist path into content: [...]
+        configContent = configContent.replace(
+          /(content:\s*\[)/,
+          `$1\n    ${canopyDistPath},`
+        );
+        fs.writeFileSync(targetConfig, configContent, "utf-8");
+        console.log(
+          "\x1b[32m%s\x1b[0m",
+          `✔ Configured Tailwind content path in ${path.relative(cwd, targetConfig)}`
+        );
+      }
+    }
+
+    console.log(
+      "\n\x1b[32m%s\x1b[0m",
+      "✨ Canopy UI configured! Mount <Toaster /> in your layout and start triggering toasts."
+    );
+  });
+
+// ==========================================
+// 2. ADD COMMAND
+// ==========================================
+program
+  .command("add")
+  .description("Add UI components to your project")
+  .argument("[components...]", "Names of the components to install")
+  .action(async (components: string[]) => {
+    await add(components);
+  });
+
+program.parse();
+</file>
+
+<file path="src/templates/button/button.tsx">
+
+</file>
+
+<file path="src/templates/toast/use-toast.ts">
+"use client";
+
+import * as React from "react";
+
+/**
+ * Supported visual styles and operational modes for toasts.
+ * - "default" | "success" | "error" | "warning" | "info": Semantic presets
+ * - "custom": Custom token/color overrides
+ * - "loading": Persistent spinner mode for asynchronous operations
+ */
+export type ToastVariant =
+  | "default"
+  | "success"
+  | "error"
+  | "warning"
+  | "info"
+  | "custom"
+  | "loading";
+
+export interface ToastOptions {
+  /** Optional custom identifier. If omitted, a collision-resistant UUID is generated. */
+  id?: string;
+  /** Primary title text or JSX element displayed in the toast header. */
+  title?: React.ReactNode;
+  /** Secondary explanatory text or JSX node rendered below the title. */
+  description?: React.ReactNode;
+  /** Interactive action button or control rendered at the bottom of the toast. */
+  action?: React.ReactNode;
+  /** Visual variant styling preset. Defaults to "default". */
+  variant?: ToastVariant;
+  /** Display duration in milliseconds before auto-dismissing. Set to 0 or Infinity to prevent auto-dismiss. */
+  duration?: number;
+  /** Maximum number of duplicate message stacks allowed for this specific toast (defaults to 5). */
+  maxCount?: number;
+  /** Explicitly toggle the animated bottom progress bar. Defaults to true when auto-dismissible. */
+  showProgress?: boolean;
+  /** Optional custom icon node to override the variant preset icon. */
+  icon?: React.ReactNode;
+  /** Custom inline token styling overrides for background, border, text, progress bar, and icon. */
+  customColor?: {
+    bg?: string;
+    text?: string;
+    border?: string;
+    progress?: string;
+    icon?: string;
+  };
+  /** Additional Tailwind or CSS class names to apply to the root toast card container. */
+  className?: string;
+}
+
+export interface ToastItem extends ToastOptions {
+  id: string;
+  open: boolean;
+  count: number;
+  maxReached?: boolean;
+}
+
+// -----------------------------------------------------------------------------
+// Constants & Configuration
+// -----------------------------------------------------------------------------
+
+/** Maximum number of simultaneous toasts rendered on screen at any time. */
+const TOAST_LIMIT = 5;
+
+/** Default duplicate stack cap if not overridden per toast. */
+const DEFAULT_MAX_COUNT = 5;
+
+/** Delay in ms before unmounting a dismissed toast from the state tree. */
+const TOAST_REMOVE_DELAY = 0;
+
+// -----------------------------------------------------------------------------
+// Action Types & State Management
+// -----------------------------------------------------------------------------
+
+type Action =
+  | { type: "ADD_TOAST"; toast: ToastItem }
+  | { type: "UPDATE_TOAST"; toast: Partial<ToastItem> }
+  | { type: "DISMISS_TOAST"; toastId?: string }
+  | { type: "REMOVE_TOAST"; toastId?: string };
+
+interface State {
+  toasts: ToastItem[];
+}
+
+/**
+ * Generates a collision-resistant unique identifier.
+ * Uses native crypto.randomUUID when available, falling back to high-resolution timestamps.
+ */
+function genId(): string {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+}
+
+/** Tracks active unmount timers to prevent duplicate queue dispatches. */
+const toastTimeouts = new Map<string, ReturnType<typeof setTimeout>>();
+
+/**
+ * Schedules a toast for removal from memory after dismissal animations complete.
+ */
+const addToRemoveQueue = (toastId: string) => {
+  if (toastTimeouts.has(toastId)) return;
+
+  const timeout = setTimeout(() => {
+    toastTimeouts.delete(toastId);
+    dispatch({ type: "REMOVE_TOAST", toastId });
+  }, TOAST_REMOVE_DELAY);
+
+  toastTimeouts.set(toastId, timeout);
+};
+
+/**
+ * Main state reducer managing insertion, deduplication stacking, updates, and dismissals.
+ */
+export const reducer = (state: State, action: Action): State => {
+  switch (action.type) {
+    case "ADD_TOAST": {
+      // 1. In-place update: If a toast with this exact ID already exists (e.g. toast.promise transitions), update it
+      const existingByIdIndex = state.toasts.findIndex((t) => t.id === action.toast.id);
+
+      if (existingByIdIndex !== -1) {
+        return {
+          ...state,
+          toasts: state.toasts.map((t) =>
+            t.id === action.toast.id ? { ...t, ...action.toast, open: true } : t
+          ),
+        };
+      }
+
+      // 2. Duplicate Detection: Match on open state, title, description, and variant to increment badge counter
+      const existingIndex = state.toasts.findIndex(
+        (t) =>
+          t.open &&
+          t.title === action.toast.title &&
+          t.description === action.toast.description &&
+          (t.variant || "default") === (action.toast.variant || "default")
+      );
+
+      if (existingIndex !== -1) {
+        const existing = state.toasts[existingIndex];
+        const maxLimit = existing.maxCount ?? action.toast.maxCount ?? DEFAULT_MAX_COUNT;
+
+        // Cap the count at maxLimit
+        const newCount = Math.min(existing.count + 1, maxLimit);
+        const maxReached = existing.count + 1 >= maxLimit;
+
+        const updatedToast: ToastItem = {
+          ...existing,
+          ...action.toast,
+          id: existing.id,
+          count: newCount,
+          maxReached,
+          open: true,
+        };
+
+        // Move updated toast to the top of the stack
+        const rest = state.toasts.filter((t) => t.id !== existing.id);
+        return {
+          ...state,
+          toasts: [updatedToast, ...rest].slice(0, TOAST_LIMIT),
+        };
+      }
+
+      // 3. New Toast: Prepend to list and truncate at TOAST_LIMIT
+      return {
+        ...state,
+        toasts: [action.toast, ...state.toasts].slice(0, TOAST_LIMIT),
+      };
+    }
+
+    case "UPDATE_TOAST":
+      return {
+        ...state,
+        toasts: state.toasts.map((t) =>
+          t.id === action.toast.id ? { ...t, ...action.toast } : t
+        ),
+      };
+
+    case "DISMISS_TOAST": {
+      const { toastId } = action;
+
+      // Queue removal for specific toast or all active toasts
+      if (toastId) {
+        addToRemoveQueue(toastId);
+      } else {
+        state.toasts.forEach((toast) => addToRemoveQueue(toast.id));
+      }
+
+      // Mark toast as closed to trigger exit transitions
+      return {
+        ...state,
+        toasts: state.toasts.map((t) =>
+          t.id === toastId || toastId === undefined ? { ...t, open: false } : t
+        ),
+      };
+    }
+
+    case "REMOVE_TOAST":
+      if (action.toastId === undefined) return { ...state, toasts: [] };
+      return {
+        ...state,
+        toasts: state.toasts.filter((t) => t.id !== action.toastId),
+      };
+
+    default:
+      return state;
+  }
+};
+
+// -----------------------------------------------------------------------------
+// Store Listeners & Dispatch Dispatcher
+// -----------------------------------------------------------------------------
+
+const listeners: Array<(state: State) => void> = [];
+let memoryState: State = { toasts: [] };
+
+function dispatch(action: Action) {
+  memoryState = reducer(memoryState, action);
+  listeners.forEach((listener) => listener(memoryState));
+}
+
+// -----------------------------------------------------------------------------
+// Core Toast Dispatcher & Convenience Helpers
+// -----------------------------------------------------------------------------
+
+/**
+ * Base dispatcher function to spawn or update a toast alert.
+ */
+export function toast(props: ToastOptions) {
+  const id = props.id || genId();
+
+  const update = (updatedProps: ToastOptions) =>
+    dispatch({ type: "UPDATE_TOAST", toast: { ...updatedProps, id } });
+
+  const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id });
+
+  dispatch({
+    type: "ADD_TOAST",
+    toast: {
+      ...props,
+      id,
+      open: true,
+      count: 1,
+      maxReached: false,
+    },
+  });
+
+  return { id, dismiss, update };
+}
+
+/** Convenience helper: Spawns a success variant toast. */
+toast.success = (title: React.ReactNode, options?: Omit<ToastOptions, "title" | "variant">) =>
+  toast({ ...options, title, variant: "success" });
+
+/** Convenience helper: Spawns an error variant toast. */
+toast.error = (title: React.ReactNode, options?: Omit<ToastOptions, "title" | "variant">) =>
+  toast({ ...options, title, variant: "error" });
+
+/** Convenience helper: Spawns a warning variant toast. */
+toast.warning = (title: React.ReactNode, options?: Omit<ToastOptions, "title" | "variant">) =>
+  toast({ ...options, title, variant: "warning" });
+
+/** Convenience helper: Spawns an informational variant toast. */
+toast.info = (title: React.ReactNode, options?: Omit<ToastOptions, "title" | "variant">) =>
+  toast({ ...options, title, variant: "info" });
+
+/** Convenience helper: Spawns a persistent loading variant toast with infinite duration. */
+toast.loading = (title: React.ReactNode, options?: Omit<ToastOptions, "title" | "variant">) =>
+  toast({ ...options, title, variant: "loading", duration: 0 });
+
+/** Global method to dismiss a specific toast by ID or all active toasts if no ID is passed. */
+toast.dismiss = (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId });
+
+/**
+ * Asynchronous promise lifecycle handler.
+ * Displays a loading state and seamlessly transitions to success or error on resolution.
+ */
+toast.promise = <T,>(
+  promise: Promise<T> | (() => Promise<T>),
+  msgs: {
+    loading: React.ReactNode;
+    success: React.ReactNode | ((data: T) => React.ReactNode);
+    error: React.ReactNode | ((err: unknown) => React.ReactNode);
+  },
+  options?: ToastOptions
+) => {
+  const instance = toast({
+    ...options,
+    variant: "loading",
+    title: msgs.loading,
+    duration: 0,
+  });
+
+  const promiseFn = typeof promise === "function" ? promise() : promise;
+
+  promiseFn
+    .then((data) => {
+      const successTitle = typeof msgs.success === "function" ? msgs.success(data) : msgs.success;
+      toast.success(successTitle, {
+        ...options,
+        id: instance.id,
+        duration: options?.duration ?? 4000,
+      });
+    })
+    .catch((err: unknown) => {
+      const errorTitle = typeof msgs.error === "function" ? msgs.error(err) : msgs.error;
+      toast.error(errorTitle, {
+        ...options,
+        id: instance.id,
+        duration: options?.duration ?? 5000,
+      });
+    });
+
+  return promiseFn;
+};
+
+// -----------------------------------------------------------------------------
+// React Consumer Hook
+// -----------------------------------------------------------------------------
+
+/**
+ * React hook providing reactive toast state, dispatchers, and dismissal handlers.
+ */
+export function useToast() {
+  const [state, setState] = React.useState<State>(memoryState);
+
+  React.useEffect(() => {
+    listeners.push(setState);
+    return () => {
+      const index = listeners.indexOf(setState);
+      if (index > -1) {
+        listeners.splice(index, 1);
+      }
+    };
+  }, []);
+
+  return {
+    ...state,
+    toast,
+    dismiss: (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId }),
+  };
+}
+</file>
+
+<file path="src/templates/theme.ts">
+// src/templates/theme.ts
+export const CANOPY_THEME_CSS = `
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
+    --border: 240 5.9% 90%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+    --accent: 240 4.8% 95.9%;
+    --primary: 217 91% 60%;
+    --destructive: 0 84.2% 60.2%;
+    --success: 142 76% 36%;
+    --success-bg: 142 76% 96%;
+    --warning: 38 92% 50%;
+    --warning-bg: 48 96% 96%;
+    --radius-lg: 0.625rem;
+  }
+
+  .dark {
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 240 10% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --border: 240 3.7% 15.9%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+    --accent: 240 3.7% 15.9%;
+    --primary: 217 91% 60%;
+    --destructive: 0 62.8% 30.6%;
+    --success: 142 70% 45%;
+    --success-bg: 160 84% 6%;
+    --warning: 38 92% 50%;
+    --warning-bg: 35 92% 8%;
+  }
+}
+`;
+</file>
+
+<file path=".gitattributes">
+# Auto detect text files and perform LF normalization
+* text=auto
+</file>
+
+<file path=".gitignore">
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+.yarn/install-state.gz
+
+# Next.js Build & Outputs
+.next/
+out/
+build/
+dist/
+
+# Environment Variables & Secrets
+.env
+.env*.local
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Vercel Deployment
+.vercel
+
+# TypeScript & Cache
+*.tsbuildinfo
+next-env.d.ts
+.eslintcache
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# System & OS Files
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+</file>
+
+<file path="CHANGELOG.md">
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [1.2.0] - 2026-08-20
+
+### Added
+- Helper convenience functions: `toast.success()`, `toast.error()`, `toast.warning()`, `toast.info()`, and `toast.loading()`.
+- Built-in `toast.promise()` handler to automatically manage async workflows across loading, success, and error states.
+- Global `toast.dismiss()` method to dismiss toasts from outside React components.
+- `showProgress?: boolean` prop in `ToastOptions` to manually toggle progress bar visibility.
+- `icon?: React.ReactNode` prop for custom icon overrides.
+- Pause-on-hover interaction that freezes the countdown timer and progress bar animation.
+- Dynamic ARIA live attributes (`role="alert"` / `role="status"`) for accessibility.
+
+### Fixed
+- Replaced sequential counter IDs with collision-proof UUIDs to resolve duplicate key errors during Next.js / Turbopack Fast Refresh.
+- Refactored timer logic to eliminate React 19 compiler warnings regarding synchronous `setState` in effects.
+- Removed impure `Date.now()` declarations during render.
+
+### Changed
+- Refactored TypeScript definitions: replaced all `:any` types with `LucideIcon | null` and `unknown` for strict type safety.
+
+---
+
+## [1.0.0] - 2026-08-01
+- Initial release with basic toast functionality, duplication stacking, and variant styling.
+</file>
+
+<file path="LICENSE">
+MIT License
+
+Copyright (c) 2026 ShawnR04
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+</file>
+
+<file path="src/templates/toast/toast.tsx">
+"use client";
+
+import * as React from "react";
+import {
+  CheckCircle2,
+  AlertCircle,
+  AlertTriangle,
+  Info,
+  Loader2,
+  X,
+  type LucideIcon,
+} from "lucide-react";
+
+// =============================================================================
+// 1. TYPES & BLUEPRINTS
+// =============================================================================
+
+export type ToastVariant =
+  | "default"
+  | "success"
+  | "error"
+  | "warning"
+  | "info"
+  | "custom"
+  | "loading";
+
+export type ToastPosition =
+  | "top-right"
+  | "bottom-right"
+  | "top-center"
+  | "bottom-center"
+  | "top-left"
+  | "bottom-left";
+
+export interface ToastOptions {
+  id?: string | undefined;
+  title?: React.ReactNode | undefined;
+  description?: React.ReactNode | undefined;
+  action?: React.ReactNode | undefined;
+  variant?: ToastVariant | undefined;
+  duration?: number | undefined;
+  maxCount?: number | undefined;
+  showProgress?: boolean | undefined;
+  icon?: React.ReactNode | undefined;
+  customColor?:
+    | {
+        bg?: string | undefined;
+        text?: string | undefined;
+        border?: string | undefined;
+        progress?: string | undefined;
+        icon?: string | undefined;
+      }
+    | undefined;
+  className?: string | undefined;
+}
+
+export interface ToastItem extends ToastOptions {
+  id: string;
+  open: boolean;
+  count: number;
+  maxReached?: boolean | undefined;
+  createdAt: number;
+  /** Flags that an exit animation is running before complete DOM unmount */
+  exiting?: boolean | undefined;
+}
+
+export interface ToasterProps {
+  defaultDuration?: number | undefined;
+  position?: ToastPosition | undefined;
+}
+
+export interface VariantStyle {
+  bg: string;
+  border: string;
+  title: string;
+  description: string;
+  progress: string;
+  iconColor: string;
+  badge: string;
+  icon: LucideIcon | null;
+}
+
+// =============================================================================
+// 2. HELPER UTILITIES
+// =============================================================================
+
+/**
+ * Robust equality check for deduplication supporting primitives and keyed JSX.
+ */
+function areNodesEqual(a: React.ReactNode, b: React.ReactNode): boolean {
+  if (a === b) return true;
+  if (typeof a !== typeof b) return false;
+  if (React.isValidElement(a) && React.isValidElement(b)) {
+    return a.key !== null && a.key !== undefined && a.key === b.key;
+  }
+  return false;
+}
+
+// =============================================================================
+// 3. THE MEGAPHONE STORE (Position Radio Station)
+// =============================================================================
+
+const positionListeners = new Set<() => void>();
+let activePositionState: ToastPosition = "top-center";
+
+export function setToastPosition(position: ToastPosition) {
+  activePositionState = position;
+  positionListeners.forEach((listener) => listener());
+}
+
+function subscribePosition(callback: () => void) {
+  positionListeners.add(callback);
+  return () => {
+    positionListeners.delete(callback);
+  };
+}
+
+function getPositionSnapshot(): ToastPosition {
+  return activePositionState;
+}
+
+// =============================================================================
+// 4. THE COSTUME CLOSET (Variant Color & Icon Themes)
+// =============================================================================
+
+const variantStyles: Record<ToastVariant, VariantStyle> = {
+  default: {
+    bg: "bg-card dark:bg-neutral-900/95",
+    border: "border-border dark:border-neutral-700/80",
+    title: "text-neutral-900 dark:text-neutral-50",
+    description: "text-neutral-600 dark:text-neutral-200",
+    progress: "bg-neutral-900/20 dark:bg-neutral-400",
+    iconColor: "text-neutral-700 dark:text-neutral-300",
+    badge:
+      "bg-neutral-200 text-neutral-800 dark:bg-neutral-800 dark:text-neutral-100 border-neutral-300 dark:border-neutral-700",
+    icon: null,
+  },
+  custom: {
+    bg: "bg-card dark:bg-neutral-900/95",
+    border: "border-border dark:border-neutral-700/80",
+    title: "text-neutral-900 dark:text-neutral-50",
+    description: "text-neutral-600 dark:text-neutral-200",
+    progress: "bg-neutral-900/20 dark:bg-neutral-400",
+    iconColor: "text-neutral-700 dark:text-neutral-300",
+    badge:
+      "bg-neutral-200 text-neutral-800 dark:bg-neutral-800 dark:text-neutral-100 border-neutral-300 dark:border-neutral-700",
+    icon: null,
+  },
+  success: {
+    bg: "bg-emerald-50 dark:bg-emerald-950/60",
+    border: "border-emerald-500/40 dark:border-emerald-500/50",
+    title: "text-emerald-950 dark:text-emerald-100",
+    description: "text-emerald-800 dark:text-emerald-200/90",
+    progress: "bg-emerald-600 dark:bg-emerald-400",
+    iconColor: "text-emerald-600 dark:text-emerald-400",
+    badge:
+      "bg-emerald-100 text-emerald-900 dark:bg-emerald-900/80 dark:text-emerald-100 border-emerald-300 dark:border-emerald-700",
+    icon: CheckCircle2,
+  },
+  error: {
+    bg: "bg-red-50 dark:bg-red-950/60",
+    border: "border-red-500/30 dark:border-red-500/50",
+    title: "text-red-950 dark:text-red-100",
+    description: "text-red-800 dark:text-red-200/90",
+    progress: "bg-red-600 dark:bg-red-400",
+    iconColor: "text-red-600 dark:text-red-400",
+    badge:
+      "bg-red-100 text-red-900 dark:bg-red-900/80 dark:text-red-100 border-red-300 dark:border-red-700",
+    icon: AlertCircle,
+  },
+  warning: {
+    bg: "bg-amber-50 dark:bg-amber-950/60",
+    border: "border-amber-500/40 dark:border-amber-500/50",
+    title: "text-amber-950 dark:text-amber-100",
+    description: "text-amber-800 dark:text-amber-200/90",
+    progress: "bg-amber-600 dark:bg-amber-400",
+    iconColor: "text-amber-600 dark:text-amber-400",
+    badge:
+      "bg-amber-100 text-amber-900 dark:bg-amber-900/80 dark:text-amber-100 border-amber-300 dark:border-amber-700",
+    icon: AlertTriangle,
+  },
+  info: {
+    bg: "bg-sky-50 dark:bg-sky-950/60",
+    border: "border-sky-500/30 dark:border-sky-500/50",
+    title: "text-sky-950 dark:text-sky-100",
+    description: "text-sky-800 dark:text-sky-200/90",
+    progress: "bg-sky-600 dark:bg-sky-400",
+    iconColor: "text-sky-600 dark:text-sky-400",
+    badge:
+      "bg-sky-100 text-sky-900 dark:bg-sky-900/80 dark:text-sky-100 border-sky-300 dark:border-sky-700",
+    icon: Info,
+  },
+  loading: {
+    bg: "bg-card dark:bg-neutral-900/95",
+    border: "border-border dark:border-neutral-700/80",
+    title: "text-neutral-900 dark:text-neutral-50",
+    description: "text-neutral-600 dark:text-neutral-200",
+    progress: "bg-primary dark:bg-sky-400",
+    iconColor: "text-primary dark:text-sky-400 animate-spin",
+    badge:
+      "bg-neutral-200 text-neutral-800 dark:bg-neutral-800 dark:text-neutral-100 border-neutral-300 dark:border-neutral-700",
+    icon: Loader2,
+  },
+};
+
+// =============================================================================
+// 5. THE REDUCER
+// =============================================================================
+
+const TOAST_LIMIT = 5;
+const DEFAULT_MAX_COUNT = 5;
+
+type Action =
+  | { type: "ADD_TOAST"; toast: ToastItem }
+  | { type: "UPDATE_TOAST"; toast: Partial<ToastItem> }
+  | { type: "START_DISMISS"; toastId?: string | undefined }
+  | { type: "DISMISS_TOAST"; toastId?: string | undefined };
+
+interface State {
+  toasts: ToastItem[];
+}
+
+function genId(): string {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+}
+
+export const reducer = (state: State, action: Action): State => {
+  switch (action.type) {
+    case "ADD_TOAST": {
+      const existingByIdIndex = state.toasts.findIndex((t) => t.id === action.toast.id);
+
+      if (existingByIdIndex !== -1) {
+        return {
+          ...state,
+          toasts: state.toasts.map((t) =>
+            t.id === action.toast.id
+              ? { ...t, ...action.toast, open: true, exiting: false }
+              : t
+          ),
+        };
+      }
+
+      const existingIndex = state.toasts.findIndex(
+        (t) =>
+          t.open &&
+          !t.exiting &&
+          areNodesEqual(t.title, action.toast.title) &&
+          areNodesEqual(t.description, action.toast.description) &&
+          (t.variant || "default") === (action.toast.variant || "default")
+      );
+
+      if (existingIndex !== -1) {
+        const existing = state.toasts[existingIndex];
+        if (!existing) return state;
+
+        const maxLimit = existing.maxCount ?? action.toast.maxCount ?? DEFAULT_MAX_COUNT;
+        const newCount = Math.min(existing.count + 1, maxLimit);
+        const maxReached = existing.count + 1 >= maxLimit;
+
+        const updatedToast: ToastItem = {
+          ...existing,
+          ...action.toast,
+          id: existing.id,
+          count: newCount,
+          maxReached,
+          open: true,
+          exiting: false,
+          createdAt: Date.now(),
+        };
+
+        const rest = state.toasts.filter((t) => t.id !== existing.id);
+        return {
+          ...state,
+          toasts: [updatedToast, ...rest].slice(0, TOAST_LIMIT),
+        };
+      }
+
+      return {
+        ...state,
+        toasts: [action.toast, ...state.toasts].slice(0, TOAST_LIMIT),
+      };
+    }
+
+    case "UPDATE_TOAST":
+      return {
+        ...state,
+        toasts: state.toasts.map((t) =>
+          t.id === action.toast.id ? { ...t, ...action.toast } : t
+        ),
+      };
+
+    case "START_DISMISS": {
+      const { toastId } = action;
+      return {
+        ...state,
+        toasts: state.toasts.map((t) =>
+          toastId === undefined || t.id === toastId ? { ...t, exiting: true } : t
+        ),
+      };
+    }
+
+    case "DISMISS_TOAST": {
+      const { toastId } = action;
+      if (toastId) {
+        return {
+          ...state,
+          toasts: state.toasts.filter((t) => t.id !== toastId),
+        };
+      }
+      return {
+        ...state,
+        toasts: [],
+      };
+    }
+
+    default:
+      return state;
+  }
+};
+
+// =============================================================================
+// 6. THE GLOBAL TOAST VAULT
+// =============================================================================
+
+const listeners = new Set<() => void>();
+let memoryState: State = { toasts: [] };
+
+function dispatch(action: Action) {
+  memoryState = reducer(memoryState, action);
+  listeners.forEach((listener) => listener());
+}
+
+function subscribe(callback: () => void) {
+  listeners.add(callback);
+  return () => {
+    listeners.delete(callback);
+  };
+}
+
+function getSnapshot(): State {
+  return memoryState;
+}
+
+// =============================================================================
+// 7. DEVELOPER API (toast())
+// =============================================================================
+
+export function toast(props: ToastOptions) {
+  const id = props.id || genId();
+
+  const update = (updatedProps: ToastOptions) =>
+    dispatch({ type: "UPDATE_TOAST", toast: { ...updatedProps, id } });
+
+  const dismiss = () => dispatch({ type: "START_DISMISS", toastId: id });
+
+  dispatch({
+    type: "ADD_TOAST",
+    toast: {
+      ...props,
+      id,
+      open: true,
+      count: 1,
+      maxReached: false,
+      createdAt: Date.now(),
+      exiting: false,
+    },
+  });
+
+  return { id, dismiss, update };
+}
+
+toast.success = (title: React.ReactNode, options?: Omit<ToastOptions, "title" | "variant">) =>
+  toast({ ...options, title, variant: "success" });
+
+toast.error = (title: React.ReactNode, options?: Omit<ToastOptions, "title" | "variant">) =>
+  toast({ ...options, title, variant: "error" });
+
+toast.warning = (title: React.ReactNode, options?: Omit<ToastOptions, "title" | "variant">) =>
+  toast({ ...options, title, variant: "warning" });
+
+toast.info = (title: React.ReactNode, options?: Omit<ToastOptions, "title" | "variant">) =>
+  toast({ ...options, title, variant: "info" });
+
+toast.loading = (title: React.ReactNode, options?: Omit<ToastOptions, "title" | "variant">) =>
+  toast({ ...options, title, variant: "loading", duration: 0 });
+
+toast.dismiss = (toastId?: string | undefined) => dispatch({ type: "START_DISMISS", toastId });
+
+toast.promise = <T,>(
+  promise: Promise<T> | (() => Promise<T>),
+  msgs: {
+    loading: React.ReactNode;
+    success: React.ReactNode | ((data: T) => React.ReactNode);
+    error: React.ReactNode | ((err: unknown) => React.ReactNode);
+  },
+  options?: ToastOptions
+) => {
+  const instance = toast({
+    ...options,
+    variant: "loading",
+    title: msgs.loading,
+    duration: 0,
+  });
+
+  const promiseFn = typeof promise === "function" ? promise() : promise;
+
+  promiseFn
+    .then((data) => {
+      const successTitle = typeof msgs.success === "function" ? msgs.success(data) : msgs.success;
+      toast.success(successTitle, {
+        ...options,
+        id: instance.id,
+        duration: options?.duration ?? 4000,
+      });
+    })
+    .catch((err: unknown) => {
+      const errorTitle = typeof msgs.error === "function" ? msgs.error(err) : msgs.error;
+      toast.error(errorTitle, {
+        ...options,
+        id: instance.id,
+        duration: options?.duration ?? 5000,
+      });
+    });
+
+  return promiseFn;
+};
+
+// =============================================================================
+// 8. REACT CONSUMER HOOK
+// =============================================================================
+
+export function useToast() {
+  const state = React.useSyncExternalStore(subscribe, getSnapshot, () => memoryState);
+
+  return {
+    ...state,
+    toast,
+    setToastPosition,
+    dismiss: (toastId?: string | undefined) => dispatch({ type: "START_DISMISS", toastId }),
+    remove: (toastId?: string | undefined) => dispatch({ type: "DISMISS_TOAST", toastId }),
+  };
+}
+
+// =============================================================================
+// 9. THE MASTER STAGE (<Toaster />)
+// =============================================================================
+
+export function Toaster({ defaultDuration = 4000, position }: ToasterProps) {
+  const { toasts, dismiss, remove } = useToast();
+
+  const storePosition = React.useSyncExternalStore(
+    subscribePosition,
+    getPositionSnapshot,
+    (): ToastPosition => "top-center"
+  );
+
+  const activePosition: ToastPosition = position ?? storePosition;
+
+  const positionClasses: Record<ToastPosition, string> = {
+    "top-right": "top-4 right-4 items-end",
+    "top-left": "top-4 left-4 items-start",
+    "bottom-right": "bottom-4 right-4 items-end",
+    "bottom-left": "bottom-4 left-4 items-start",
+    "top-center": "top-4 left-1/2 -translate-x-1/2 items-center",
+    "bottom-center": "bottom-4 left-1/2 -translate-x-1/2 items-center",
+  };
+
+  return (
+    <>
+      <style>{`
+        @keyframes toast-progress {
+          from { transform: scaleX(1); }
+          to { transform: scaleX(0); }
+        }
+        @keyframes toast-expand {
+          from { grid-template-rows: 0fr; }
+          to { grid-template-rows: 1fr; }
+        }
+        @keyframes toast-fade-in {
+          from { opacity: 0; transform: translateY(-4px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes toast-pop {
+          0% { transform: scale(0.6); }
+          50% { transform: scale(1.2); }
+          100% { transform: scale(1); }
+        }
+        @keyframes toast-shake {
+          0%, 100% { transform: translateX(0); }
+          25% { transform: translateX(-2px); }
+          75% { transform: translateX(2px); }
+        }
+
+        /* DIRECTIONAL ENTRANCES */
+        @keyframes toast-slide-in-right {
+          0% { opacity: 0; transform: translate3d(100%, 0, 0) scale(0.9); }
+          70% { transform: translate3d(-4px, 0, 0) scale(1.01); }
+          100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+        }
+        @keyframes toast-slide-in-left {
+          0% { opacity: 0; transform: translate3d(-100%, 0, 0) scale(0.9); }
+          70% { transform: translate3d(4px, 0, 0) scale(1.01); }
+          100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+        }
+        @keyframes toast-slide-in-top {
+          0% { opacity: 0; transform: translate3d(0, -100%, 0) scale(0.9); }
+          70% { transform: translate3d(0, 4px, 0) scale(1.01); }
+          100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+        }
+        @keyframes toast-slide-in-bottom {
+          0% { opacity: 0; transform: translate3d(0, 100%, 0) scale(0.9); }
+          70% { transform: translate3d(0, -4px, 0) scale(1.01); }
+          100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+        }
+
+        /* DIRECTIONAL EXITS (Translate + Fade + Height Collapse) */
+        @keyframes toast-slide-out-right {
+          0% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); max-height: 200px; margin-bottom: 0px; }
+          40% { opacity: 0; transform: translate3d(105%, 0, 0) scale(0.92); }
+          100% { opacity: 0; transform: translate3d(105%, 0, 0) scale(0.92); max-height: 0px; margin-bottom: -8px; padding-top: 0; padding-bottom: 0; }
+        }
+        @keyframes toast-slide-out-left {
+          0% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); max-height: 200px; margin-bottom: 0px; }
+          40% { opacity: 0; transform: translate3d(-105%, 0, 0) scale(0.92); }
+          100% { opacity: 0; transform: translate3d(-105%, 0, 0) scale(0.92); max-height: 0px; margin-bottom: -8px; padding-top: 0; padding-bottom: 0; }
+        }
+        @keyframes toast-slide-out-top {
+          0% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); max-height: 200px; margin-bottom: 0px; }
+          40% { opacity: 0; transform: translate3d(0, -60%, 0) scale(0.9); }
+          100% { opacity: 0; transform: translate3d(0, -60%, 0) scale(0.9); max-height: 0px; margin-bottom: -8px; padding-top: 0; padding-bottom: 0; }
+        }
+        @keyframes toast-slide-out-bottom {
+          0% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); max-height: 200px; margin-bottom: 0px; }
+          40% { opacity: 0; transform: translate3d(0, 60%, 0) scale(0.9); }
+          100% { opacity: 0; transform: translate3d(0, 60%, 0) scale(0.9); max-height: 0px; margin-bottom: -8px; padding-top: 0; padding-bottom: 0; }
+        }
+      `}</style>
+
+      <div
+        className={`fixed z-50 pointer-events-none flex flex-col gap-2 p-4 w-full max-w-sm transition-all duration-300 ease-out ${positionClasses[activePosition]}`}
+      >
+        {toasts.map((item) => (
+          <ToastElement
+            key={item.id}
+            toast={item}
+            position={activePosition}
+            defaultDuration={defaultDuration ?? 4000}
+            onDismiss={() => dismiss(item.id)}
+            onRemove={() => remove(item.id)}
+          />
+        ))}
+      </div>
+    </>
+  );
+}
+
+// =============================================================================
+// 10. THE INDIVIDUAL TOAST CARD (<ToastElement />)
+// =============================================================================
+
+function ToastElement({
+  toast,
+  position,
+  defaultDuration,
+  onDismiss,
+  onRemove,
+}: {
+  toast: ToastItem;
+  position: ToastPosition;
+  defaultDuration: number;
+  onDismiss: () => void;
+  onRemove: () => void;
+}) {
+  const isAutoDismissible =
+    toast.variant !== "loading" && (toast.duration === undefined || toast.duration > 0);
+  const activeDuration = toast.duration ?? defaultDuration;
+  const showProgress = toast.showProgress ?? isAutoDismissible;
+
+  const [isPaused, setIsPaused] = React.useState(false);
+  const remainingTimeRef = React.useRef<number>(activeDuration);
+  const startTimeRef = React.useRef<number>(0);
+  const onDismissRef = React.useRef(onDismiss);
+
+  React.useEffect(() => {
+    onDismissRef.current = onDismiss;
+  }, [onDismiss]);
+
+  React.useEffect(() => {
+    remainingTimeRef.current = activeDuration;
+  }, [toast.id, toast.count, activeDuration]);
+
+  React.useEffect(() => {
+    if (!isAutoDismissible || isPaused || toast.exiting) return;
+
+    startTimeRef.current = Date.now();
+    const timer = setTimeout(() => {
+      onDismissRef.current();
+    }, remainingTimeRef.current);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [isAutoDismissible, isPaused, toast.id, toast.count, toast.createdAt, toast.exiting]);
+
+  const handlePause = () => {
+    if (!isAutoDismissible || toast.exiting) return;
+    const elapsed = Date.now() - startTimeRef.current;
+    remainingTimeRef.current = Math.max(remainingTimeRef.current - elapsed, 0);
+    setIsPaused(true);
+  };
+
+  const handleResume = () => {
+    if (!isAutoDismissible || toast.exiting) return;
+    setIsPaused(false);
+  };
+
+  const variant: ToastVariant = toast.variant || "default";
+  const defaultStyle: VariantStyle = variantStyles[variant] ?? variantStyles.default;
+  const IconComponent = toast.icon !== undefined ? null : defaultStyle.icon;
+
+  const customInlineStyle: React.CSSProperties = {};
+  if (toast.customColor?.bg) customInlineStyle.backgroundColor = toast.customColor.bg;
+  if (toast.customColor?.border) customInlineStyle.borderColor = toast.customColor.border;
+  if (toast.customColor?.text) customInlineStyle.color = toast.customColor.text;
+
+  const enterAnimationMap: Record<ToastPosition, string> = {
+    "top-right": "toast-slide-in-right 320ms cubic-bezier(0.16, 1, 0.3, 1) forwards",
+    "bottom-right": "toast-slide-in-right 320ms cubic-bezier(0.16, 1, 0.3, 1) forwards",
+    "top-left": "toast-slide-in-left 320ms cubic-bezier(0.16, 1, 0.3, 1) forwards",
+    "bottom-left": "toast-slide-in-left 320ms cubic-bezier(0.16, 1, 0.3, 1) forwards",
+    "top-center": "toast-slide-in-top 320ms cubic-bezier(0.16, 1, 0.3, 1) forwards",
+    "bottom-center": "toast-slide-in-bottom 320ms cubic-bezier(0.16, 1, 0.3, 1) forwards",
+  };
+
+  const exitAnimationMap: Record<ToastPosition, string> = {
+    "top-right": "toast-slide-out-right 280ms cubic-bezier(0.4, 0, 1, 1) forwards",
+    "bottom-right": "toast-slide-out-right 280ms cubic-bezier(0.4, 0, 1, 1) forwards",
+    "top-left": "toast-slide-out-left 280ms cubic-bezier(0.4, 0, 1, 1) forwards",
+    "bottom-left": "toast-slide-out-left 280ms cubic-bezier(0.4, 0, 1, 1) forwards",
+    "top-center": "toast-slide-out-top 240ms cubic-bezier(0.4, 0, 1, 1) forwards",
+    "bottom-center": "toast-slide-out-bottom 240ms cubic-bezier(0.4, 0, 1, 1) forwards",
+  };
+
+  customInlineStyle.animation = toast.exiting
+    ? exitAnimationMap[position] ?? exitAnimationMap["top-center"]
+    : enterAnimationMap[position] ?? enterAnimationMap["top-center"];
+
+  const userHasBg = Boolean(toast.customColor?.bg || toast.className?.match(/(?:^|\s)bg-/));
+  const userHasBorder = Boolean(toast.customColor?.border || toast.className?.match(/(?:^|\s)border-/));
+  const userHasText = Boolean(toast.customColor?.text || toast.className?.match(/(?:^|\s)text-/));
+
+  const isError = variant === "error";
+
+  const handleAnimationEnd = (e: React.AnimationEvent<HTMLDivElement>) => {
+    // Only invoke removal when the container itself finishes the exit animation
+    if (e.target === e.currentTarget && toast.exiting) {
+      onRemove();
+    }
+  };
+
+  return (
+    <div
+      role={isError ? "alert" : "status"}
+      aria-live={isError ? "assertive" : "polite"}
+      tabIndex={0}
+      style={customInlineStyle}
+      onAnimationEnd={handleAnimationEnd}
+      onMouseEnter={handlePause}
+      onMouseLeave={handleResume}
+      onFocus={handlePause}
+      onBlur={handleResume}
+      onKeyDown={(e) => {
+        if (e.key === "Escape") {
+          e.stopPropagation();
+          onDismiss();
+        }
+      }}
+      className={`pointer-events-auto relative overflow-hidden flex items-start gap-3 w-full p-4 rounded-[var(--radius-lg,0.625rem)] border shadow-xl dark:shadow-2xl dark:shadow-black/70 dark:ring-1 dark:ring-white/10 backdrop-blur-md will-change-transform outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary ${
+        !userHasBg ? defaultStyle.bg : ""
+      } ${!userHasBorder ? defaultStyle.border : ""} ${toast.className || ""}`}
+    >
+      {/* 1. Left Icon */}
+      {toast.icon !== undefined ? (
+        <div className="shrink-0 mt-0.5">{toast.icon}</div>
+      ) : (
+        IconComponent && (
+          <IconComponent
+            className={`w-5 h-5 mt-0.5 shrink-0 ${!toast.customColor?.icon ? defaultStyle.iconColor : ""}`}
+            style={{ color: toast.customColor?.icon }}
+          />
+        )
+      )}
+
+      {/* 2. Middle Content Area */}
+      <div className="flex-1 text-sm">
+        <div className="flex items-center gap-2">
+          {toast.title && (
+            <div
+              className={`font-semibold leading-tight tracking-tight ${
+                !userHasText ? defaultStyle.title : ""
+              }`}
+            >
+              {toast.title}
+            </div>
+          )}
+
+          {toast.count > 1 && (
+            <span
+              key={`${toast.count}-${toast.maxReached}`}
+              style={{
+                animation: toast.maxReached
+                  ? "toast-shake 200ms ease-in-out"
+                  : "toast-pop 200ms ease-out",
+              }}
+              className={`inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-bold rounded-full border shadow-sm transition-transform ${
+                defaultStyle.badge
+              } ${toast.maxReached ? "ring-1 ring-destructive/40" : ""}`}
+            >
+              {toast.maxReached ? `×${toast.count} (max)` : `×${toast.count}`}
+            </span>
+          )}
+        </div>
+
+        {toast.description && (
+          <div
+            className="grid overflow-hidden"
+            style={{
+              gridTemplateRows: "0fr",
+              animation: "toast-expand 250ms cubic-bezier(0.16, 1, 0.3, 1) 200ms forwards",
+            }}
+          >
+            <div className="overflow-hidden">
+              <div
+                className={`leading-relaxed text-xs pt-1 opacity-0 font-normal ${
+                  !userHasText ? defaultStyle.description : "opacity-90"
+                }`}
+                style={{
+                  animation: "toast-fade-in 200ms ease-out 200ms forwards",
+                }}
+              >
+                {toast.description}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {toast.action && <div className="pt-2">{toast.action}</div>}
+      </div>
+
+      {/* 3. Close Button */}
+      <button
+        type="button"
+        onClick={onDismiss}
+        aria-label="Close toast"
+        className="p-1 rounded-md opacity-70 hover:opacity-100 hover:bg-neutral-500/15 dark:hover:bg-white/10 transition-colors text-inherit"
+      >
+        <X className="w-4 h-4" />
+      </button>
+
+      {/* 4. Bottom Countdown Progress Bar */}
+      {showProgress && isAutoDismissible && !toast.exiting && (
+        <div
+          key={`${toast.id}-${toast.variant}-${toast.count}`}
+          className={`absolute bottom-0 left-0 right-0 h-1 origin-left ${
+            !toast.customColor?.progress ? defaultStyle.progress : ""
+          }`}
+          style={{
+            backgroundColor: toast.customColor?.progress,
+            animation: `toast-progress ${activeDuration}ms linear forwards`,
+            animationPlayState: isPaused ? "paused" : "running",
+          }}
+        />
+      )}
+    </div>
+  );
+}
+</file>
+
+<file path="USAGE.md">
+# Toast Usage
+
+This guide covers how to use the `toast` component after adding it to your project with Canopy UI.
+
+The component includes a complete toast system in one file, including the `Toaster` component, `toast` API, `useToast` hook, variants, promise handling, positioning, custom styling, progress bars, duplicate handling, and loading states.
+
+## 1. Add the Component
+
+Install the toast component using the Canopy UI CLI:
+
+```bash
+npx @marv3l/canopy-ui add toast
+```
+
+This adds the toast component source code directly to your project.
+
+## 2. Add the Toaster
+
+Place the `<Toaster />` component once near the root of your application.
+
+For a Next.js application, you can add it to your root layout:
+
+```tsx
+import { Toaster } from "@/components/ui/toast";
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html lang="en">
+      <body>
+        {children}
+        <Toaster />
+      </body>
+    </html>
+  );
+}
+```
+
+The `Toaster` accepts a default duration and a position. By default, toasts remain visible for `4000ms` and appear at the top center of the screen.
+
+### Custom Defaults
+
+```tsx
+<Toaster
+  defaultDuration={5000}
+  position="top-right"
+/>
+```
+
+Available positions:
+
+```tsx
+type ToastPosition =
+  | "top-right"
+  | "bottom-right"
+  | "top-center"
+  | "bottom-center"
+  | "top-left"
+  | "bottom-left";
+```
+
+## 3. Import `toast`
+
+Import the toast API anywhere you need to trigger a notification:
+
+```tsx
+import { toast } from "@/components/ui/toast";
+```
+
+Then trigger a toast:
+
+```tsx
+toast({
+  title: "Notification",
+  description: "This is a default toast.",
+});
+```
+
+## 4. Success Toast
+
+Use `toast.success()` for successful actions:
+
+```tsx
+toast.success("Changes saved");
+```
+
+You can also include a description:
+
+```tsx
+toast.success("Profile updated", {
+  description: "Your changes have been saved successfully.",
+});
+```
+
+## 5. Error Toast
+
+Use `toast.error()` when an action fails:
+
+```tsx
+toast.error("Something went wrong");
+```
+
+With additional details:
+
+```tsx
+toast.error("Unable to save changes", {
+  description: "Please try again in a few moments.",
+});
+```
+
+## 6. Warning Toast
+
+Use `toast.warning()` to notify users about something requiring attention:
+
+```tsx
+toast.warning("Unsaved changes");
+```
+
+```tsx
+toast.warning("Storage almost full", {
+  description: "Consider removing files you no longer need.",
+});
+```
+
+## 7. Info Toast
+
+Use `toast.info()` for helpful information:
+
+```tsx
+toast.info("New update available");
+```
+
+```tsx
+toast.info("Maintenance scheduled", {
+  description: "The application will be temporarily unavailable tonight.",
+});
+```
+
+## 8. Loading Toast
+
+Use `toast.loading()` for actions that are still in progress:
+
+```tsx
+const loadingToast = toast.loading("Uploading file");
+```
+
+Loading toasts do not automatically disappear. You can dismiss them manually:
+
+```tsx
+const loadingToast = toast.loading("Uploading file");
+
+// Complete your operation
+
+loadingToast.dismiss();
+```
+
+You can also update the toast when the operation finishes:
+
+```tsx
+const loadingToast = toast.loading("Uploading file");
+
+setTimeout(() => {
+  loadingToast.update({
+    title: "Upload complete",
+    variant: "success",
+    duration: 4000,
+  });
+}, 2000);
+```
+
+## 9. Promise Toasts
+
+Use `toast.promise()` to automatically transition from a loading state to either a success or error state.
+
+```tsx
+toast.promise(saveProfile(), {
+  loading: "Saving profile...",
+  success: "Profile saved successfully",
+  error: "Unable to save profile",
+});
+```
+
+You can also use the resolved data:
+
+```tsx
+toast.promise(createUser(), {
+  loading: "Creating account...",
+  success: (user) => `Welcome, ${user.name}`,
+  error: "Unable to create your account",
+});
+```
+
+The promise toast creates a loading notification first, then updates the same toast when the promise resolves or rejects.
+
+## 10. Custom Duration
+
+Set a custom duration for an individual toast:
+
+```tsx
+toast.success("Changes saved", {
+  duration: 8000,
+});
+```
+
+Durations are measured in milliseconds.
+
+```tsx
+toast.info("Quick notification", {
+  duration: 2000,
+});
+```
+
+To keep a non-loading toast visible until it is manually dismissed, use:
+
+```tsx
+toast({
+  title: "Important message",
+  description: "This toast will remain visible.",
+  duration: 0,
+});
+```
+
+## 11. Hide the Progress Bar
+
+By default, automatically dismissible toasts display a progress bar.
+
+Disable it with `showProgress`:
+
+```tsx
+toast.success("Changes saved", {
+  showProgress: false,
+});
+```
+
+## 12. Add a Custom Icon
+
+You can provide your own React element as the toast icon:
+
+```tsx
+import { Bell } from "lucide-react";
+
+toast({
+  title: "New notification",
+  description: "You have a new message.",
+  icon: <Bell className="h-5 w-5" />,
+});
+```
+
+Providing an icon replaces the default icon for the selected variant.
+
+## 13. Add an Action
+
+Use `action` to add custom interactive content to a toast:
+
+```tsx
+toast({
+  title: "Item deleted",
+  description: "The item has been moved to the trash.",
+  action: (
+    <button
+      onClick={() => {
+        console.log("Undo deletion");
+      }}
+      className="text-sm font-medium underline"
+    >
+      Undo
+    </button>
+  ),
+});
+```
+
+You can use any valid React element for the action.
+
+## 14. Custom Colors
+
+Use `customColor` to override the toast colors.
+
+```tsx
+toast({
+  title: "Custom toast",
+  description: "This toast uses custom colors.",
+  customColor: {
+    bg: "#18181b",
+    text: "#ffffff",
+    border: "#3f3f46",
+    progress: "#22c55e",
+    icon: "#22c55e",
+  },
+});
+```
+
+Available color options:
+
+| Property   | Description            |
+| ---------- | ---------------------- |
+| `bg`       | Toast background color |
+| `text`     | Text color             |
+| `border`   | Border color           |
+| `progress` | Progress bar color     |
+| `icon`     | Default icon color     |
+
+You can use hex values, CSS variables, or other valid CSS color values:
+
+```tsx
+toast({
+  title: "Custom theme",
+  customColor: {
+    bg: "var(--card)",
+    text: "var(--foreground)",
+    border: "var(--primary)",
+    progress: "var(--primary)",
+  },
+});
+```
+
+## 15. Custom Tailwind Classes
+
+Use `className` to apply additional styling:
+
+```tsx
+toast.success("Deployment complete", {
+  className: "rounded-2xl shadow-2xl",
+});
+```
+
+You can also override background, border, and text utility classes:
+
+```tsx
+toast({
+  title: "Custom styled toast",
+  description: "Styled with Tailwind utilities.",
+  className:
+    "bg-violet-600 border-violet-500 text-white rounded-xl shadow-xl",
+});
+```
+
+## 16. Dynamic Positioning
+
+You can change the toast position globally with `setToastPosition()`:
+
+```tsx
+import {
+  setToastPosition,
+  toast,
+} from "@/components/ui/toast";
+
+setToastPosition("bottom-right");
+
+toast.success("Position updated");
+```
+
+For example, a user preference setting could control where future toasts appear:
+
+```tsx
+const positions = [
+  "top-right",
+  "bottom-right",
+  "top-center",
+  "bottom-center",
+  "top-left",
+  "bottom-left",
+] as const;
+
+function handlePositionChange(
+  position: (typeof positions)[number]
+) {
+  setToastPosition(position);
+
+  toast.success("Toast position updated");
+}
+```
+
+If the `<Toaster />` receives a `position` prop directly, that position takes priority over the global position state.
+
+## 17. Dismiss a Specific Toast
+
+Every call to `toast()` returns an object containing the toast ID, `dismiss()`, and `update()` functions.
+
+```tsx
+const notification = toast({
+  title: "Processing request",
+  duration: 0,
+});
+
+notification.dismiss();
+```
+
+You can also dismiss a toast using its ID:
+
+```tsx
+const notification = toast({
+  title: "Processing request",
+  duration: 0,
+});
+
+toast.dismiss(notification.id);
+```
+
+## 18. Dismiss All Toasts
+
+Call `toast.dismiss()` without an ID to remove every active toast:
+
+```tsx
+toast.dismiss();
+```
+
+## 19. Update a Toast
+
+Create a toast and update it later:
+
+```tsx
+const notification = toast({
+  title: "Uploading file",
+  description: "Please wait...",
+  variant: "loading",
+  duration: 0,
+});
+
+setTimeout(() => {
+  notification.update({
+    title: "Upload complete",
+    description: "Your file is ready.",
+    variant: "success",
+    duration: 4000,
+  });
+}, 3000);
+```
+
+You can also use a fixed ID to update the same toast by triggering another toast with that ID:
+
+```tsx
+toast({
+  id: "upload-status",
+  title: "Uploading file",
+  variant: "loading",
+  duration: 0,
+});
+
+toast.success("Upload complete", {
+  id: "upload-status",
+  description: "Your file has been uploaded.",
+});
+```
+
+## 20. Prevent Excessive Duplicate Toasts
+
+When the same toast is triggered repeatedly, identical active toasts are grouped together instead of endlessly creating new cards.
+
+```tsx
+toast.success("Saved");
+toast.success("Saved");
+toast.success("Saved");
+```
+
+The toast will display a count indicating how many times the same notification was triggered.
+
+You can control the maximum duplicate count:
+
+```tsx
+toast.success("Saved", {
+  maxCount: 3,
+});
+```
+
+The component also limits the total number of visible toast cards.
+
+## 21. Using `useToast`
+
+The `useToast()` hook gives React components access to the current toast state and toast controls.
+
+```tsx
+"use client";
+
+import { useToast } from "@/components/ui/toast";
+
+export function ToastControls() {
+  const {
+    toasts,
+    toast,
+    dismiss,
+    setToastPosition,
+  } = useToast();
+
+  return (
+    <div>
+      <button
+        onClick={() =>
+          toast.success("Hello from useToast")
+        }
+      >
+        Show Toast
+      </button>
+
+      <button
+        onClick={() => dismiss()}
+      >
+        Dismiss All
+      </button>
+
+      <button
+        onClick={() => setToastPosition("bottom-right")}
+      >
+        Move Toasts
+      </button>
+
+      <p>Active toasts: {toasts.length}</p>
+    </div>
+  );
+}
+```
+
+The hook exposes the active toast state, the `toast` API, global position controls, and a dismiss function.
+
+## 22. Available Variants
+
+The toast component supports the following variants:
+
+```tsx
+type ToastVariant =
+  | "default"
+  | "success"
+  | "error"
+  | "warning"
+  | "info"
+  | "custom"
+  | "loading";
+```
+
+Examples:
+
+```tsx
+toast({
+  title: "Default toast",
+  variant: "default",
+});
+
+toast.success("Success toast");
+
+toast.error("Error toast");
+
+toast.warning("Warning toast");
+
+toast.info("Information toast");
+
+toast.loading("Loading toast");
+```
+
+## Complete Example
+
+```tsx
+"use client";
+
+import {
+  Toaster,
+  toast,
+} from "@/components/ui/toast";
+
+export default function ToastExample() {
+  return (
+    <>
+      <div className="flex flex-wrap gap-3">
+        <button
+          onClick={() =>
+            toast.success("Changes saved", {
+              description: "Your settings have been updated.",
+            })
+          }
+        >
+          Success
+        </button>
+
+        <button
+          onClick={() =>
+            toast.error("Something went wrong", {
+              description: "Please try again.",
+            })
+          }
+        >
+          Error
+        </button>
+
+        <button
+          onClick={() =>
+            toast.warning("Unsaved changes")
+          }
+        >
+          Warning
+        </button>
+
+        <button
+          onClick={() =>
+            toast.info("New update available")
+          }
+        >
+          Info
+        </button>
+
+        <button
+          onClick={() =>
+            toast.loading("Processing request")
+          }
+        >
+          Loading
+        </button>
+
+        <button
+          onClick={() =>
+            toast({
+              title: "Custom toast",
+              description: "Fully customizable notification.",
+              customColor: {
+                bg: "#18181b",
+                text: "#ffffff",
+                border: "#3f3f46",
+                progress: "#22c55e",
+              },
+            })
+          }
+        >
+          Custom
+        </button>
+      </div>
+
+      <Toaster />
+    </>
+  );
+}
+```
+
+## API Reference
+
+### `Toaster`
+
+```tsx
+<Toaster
+  defaultDuration={4000}
+  position="top-center"
+/>
+```
+
+| Prop              | Type            | Default        | Description                              |
+| ----------------- | --------------- | -------------- | ---------------------------------------- |
+| `defaultDuration` | `number`        | `4000`         | Default display duration in milliseconds |
+| `position`        | `ToastPosition` | `"top-center"` | Default toast position                   |
+
+### `toast(options)`
+
+```tsx
+toast({
+  id: "optional-id",
+  title: "Toast title",
+  description: "Toast description",
+  variant: "success",
+  duration: 4000,
+  maxCount: 5,
+  showProgress: true,
+  icon: <Icon />,
+  action: <button>Undo</button>,
+  customColor: {},
+  className: "",
+});
+```
+
+| Option         | Description                                                |
+| -------------- | ---------------------------------------------------------- |
+| `id`           | Optional unique toast ID                                   |
+| `title`        | Main toast content                                         |
+| `description`  | Secondary descriptive content                              |
+| `action`       | Custom React content displayed below the description       |
+| `variant`      | Toast visual variant                                       |
+| `duration`     | Display duration in milliseconds                           |
+| `maxCount`     | Maximum duplicate count                                    |
+| `showProgress` | Controls the progress bar                                  |
+| `icon`         | Custom React icon                                          |
+| `customColor`  | Custom background, text, border, progress, and icon colors |
+| `className`    | Additional Tailwind classes                                |
+
+### Helper Methods
+
+```tsx
+toast.success("Success");
+
+toast.error("Error");
+
+toast.warning("Warning");
+
+toast.info("Information");
+
+toast.loading("Loading");
+
+toast.dismiss();
+
+toast.promise(promise, {
+  loading: "Loading...",
+  success: "Completed",
+  error: "Failed",
+});
+```
+
+### `useToast()`
+
+```tsx
+const {
+  toasts,
+  toast,
+  setToastPosition,
+  dismiss,
+} = useToast();
+```
+
+## Notes
+
+* Add `<Toaster />` once near the root of your application.
+* Import and call `toast` from client-side interactive code.
+* Loading toasts remain visible until they are dismissed or updated.
+* Toast timers pause while the user hovers over an automatically dismissible toast.
+* Use `toast.promise()` for async operations that need loading, success, and error feedback.
+* Use `id` values when you need to update an existing toast instead of creating a new one.
+* Use `customColor` or `className` when the built-in variants do not match your design system.
+</file>
+
+<file path=".github/workflows/publish.yml">
+name: Publish Package to npm
+
+on:
+  push:
+    branches:
+      - main
+  release:
+    types: [published]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js Environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install Dependencies Cleanly
+        run: npm ci
+
+      - name: Compile Package
+        run: npm run build
+
+      - name: Publish to npm
+        run: npm publish --access public || echo "Version already published on npm, skipping publish step."
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+</file>
+
+<file path="src/index.ts">
+#!/usr/bin/env node
+
+// Import Commander framework for CLI argument parsing
+import { Command } from "commander";
+// Import add command handler
+import { add } from "./commands/add.js";
+
+// Initialize command program instance
+const program = new Command();
+
+// Configure CLI identity and metadata
+program
+  .name("canopy-ui")
+  .description("Install custom modular UI components directly to your project")
+  .version("1.0.0");
+
+// Define 'add' command with variadic component arguments
+program
+  .command("add")
+  .description("Add a component to your project")
+  .argument("[components...]", "Component identifiers (e.g., toast)")
+  .action(async (components: string[]) => {
+    // Invoke add handler with parsed component names
+    await add(components);
+  });
+
+// Parse command line arguments from process.argv
+program.parse(process.argv);
+</file>
+
+<file path="tsconfig.json">
+{
+  // Visit https://aka.ms/tsconfig to read more about this file
+  "compilerOptions": {
+    // File Layout
+    "rootDir": "./src",
+    "outDir": "./dist",
+
+    // Environment Settings
+    // See also https://aka.ms/tsconfig/module
+    "module": "nodenext",
+    "target": "es2022",
+    "moduleResolution": "nodenext",
+    "esModuleInterop": true,
+    "types": ["node"],
+    // For nodejs:
+    // "lib": ["esnext"],
+    // "types": ["node"],
+    // and npm install -D @types/node
+
+    // Other Outputs
+    "sourceMap": true,
+    "declaration": true,
+    "declarationMap": true,
+
+    // Stricter Typechecking Options
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+
+    // Style Options
+    // "noImplicitReturns": true,
+    // "noImplicitOverride": true,
+    // "noUnusedLocals": true,
+    // "noUnusedParameters": true,
+    // "noFallthroughCasesInSwitch": true,
+    // "noPropertyAccessFromIndexSignature": true,
+
+    // Recommended Options
+    "strict": true,
+    "jsx": "react-jsx",
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "noUncheckedSideEffectImports": true,
+    "moduleDetection": "force",
+    "skipLibCheck": true
+  },
+  "include": ["src/**/*"]
+}
+</file>
+
+<file path="tsup.config.ts">
+import { defineConfig } from "tsup";
+
+export default defineConfig({
+  entry: {
+    index: "src/index.ts",
+    "cli/index": "src/cli/index.ts",
+  },
+  format: ["esm"],
+  dts: false,
+  clean: true,
+  banner: {
+    js: "",
+  },
+});
+</file>
+
+<file path="src/registry.ts">
+// src/registry.ts
+export interface ComponentMeta {
+  name: string;
+  packageName?: string;
+  dependencies?: string[];
+  files: Array<{
+    targetName: string;
+    templatePath?: string;
+    content?: string;
+  }>;
+}
+
+export const REGISTRY: Record<string, ComponentMeta> = {
+  toast: {
+    name: "Toast",
+    dependencies: ["lucide-react"], // Peer dependencies to install in consumer app
+    files: [
+      {
+        targetName: "toast.tsx",
+        templatePath: "toast/toast.tsx",
+      },
+    ],
+  },
+};
+</file>
+
+<file path="src/commands/add.ts">
+// Native Node.js path utilities
+import path from "node:path";
+// Helper to derive __dirname in ESM
+import { fileURLToPath } from "node:url";
+// File system helper with promise support
+import fs from "fs-extra";
+// Subprocess execution library for running package manager commands
+import { execa } from "execa";
+// Modern interactive CLI prompts
+import * as p from "@clack/prompts";
+// Terminal color styling
+import pc from "picocolors";
+// Component registry index
+import { REGISTRY } from "../registry.js";
+
+// Derive current directory path safely in both ES Module and CommonJS environments
+const getDirname = () => {
+  if (typeof __dirname !== "undefined") {
+    return __dirname;
+  }
+  return path.dirname(fileURLToPath(import.meta.url));
+};
+
+const currentDir = getDirname();
+
+/**
+ * Detects the active package manager used in the target project workspace
+ */
+async function detectPackageManager(projectRoot: string): Promise<"pnpm" | "yarn" | "bun" | "npm"> {
+  if (await fs.pathExists(path.join(projectRoot, "pnpm-lock.yaml"))) return "pnpm";
+  if (await fs.pathExists(path.join(projectRoot, "yarn.lock"))) return "yarn";
+  if (
+    (await fs.pathExists(path.join(projectRoot, "bun.lockb"))) ||
+    (await fs.pathExists(path.join(projectRoot, "bun.lock")))
+  ) {
+    return "bun";
+  }
+  return "npm";
+}
+
+/**
+ * Main execution function for adding components
+ */
+export async function add(componentKeys: string[]) {
+  p.intro(pc.bgCyan(pc.black(" Canopy UI ")));
+
+  let selected = componentKeys;
+
+  if (!selected || selected.length === 0) {
+    const choices = Object.keys(REGISTRY).map((key) => ({
+      value: key,
+      label: `${REGISTRY[key]?.name ?? key} (${key})`,
+    }));
+
+    const response = await p.multiselect({
+      message: "Select UI components to install:",
+      options: choices,
+      required: true,
+    });
+
+    if (p.isCancel(response)) {
+      p.cancel("Operation aborted.");
+      process.exit(0);
+    }
+    selected = response as string[];
+  }
+
+  const projectRoot = process.cwd();
+  const pkgManager = await detectPackageManager(projectRoot);
+
+  const hasSrc = await fs.pathExists(path.join(projectRoot, "src"));
+  const targetDir = hasSrc
+    ? path.join(projectRoot, "src", "components", "ui")
+    : path.join(projectRoot, "components", "ui");
+
+  await fs.ensureDir(targetDir);
+
+  const spinner = p.spinner();
+
+  for (const key of selected) {
+    const meta = REGISTRY[key];
+
+    if (!meta) {
+      p.log.error(`Component "${key}" was not found in registry.`);
+      continue;
+    }
+
+    spinner.start(`Setting up ${meta.name}...`);
+
+    // 1. Install dependencies if any exist
+    const allDependencies = [
+      ...(meta.packageName ? [meta.packageName] : []),
+      ...(meta.dependencies || []),
+    ];
+
+    if (allDependencies.length > 0) {
+      spinner.message(
+        `Installing packages (${pc.cyan(pkgManager)}): ${pc.dim(allDependencies.join(", "))}...`
+      );
+
+      const installArgs = {
+        npm: ["install", ...allDependencies],
+        pnpm: ["add", ...allDependencies],
+        yarn: ["add", ...allDependencies],
+        bun: ["add", ...allDependencies],
+      }[pkgManager];
+
+      try {
+        await execa(pkgManager, installArgs, {
+          cwd: projectRoot,
+          stdio: "pipe",
+        });
+      } catch (err) {
+        spinner.stop(pc.red(`Failed to install dependencies for ${meta.name}`));
+        p.log.error(String(err));
+        p.cancel("Installation aborted due to failed dependency resolution.");
+        process.exit(1);
+      }
+    }
+
+    // 2. Copy template files or write stubs
+    spinner.message(`Creating component files for ${meta.name}...`);
+
+    for (const file of meta.files) {
+      const destPath = path.join(targetDir, file.targetName);
+
+      if (file.templatePath) {
+        // Resolve path relative to the bundle execution context
+        const srcPath = path.resolve(currentDir, "../templates", file.templatePath);
+        if (await fs.pathExists(srcPath)) {
+          await fs.copy(srcPath, destPath, { overwrite: true });
+        } else {
+          spinner.stop(pc.red(`Template file missing: ${file.templatePath}`));
+          p.log.warn(pc.dim(`Looked at path: ${srcPath}`));
+          p.cancel("Component generation aborted.");
+          process.exit(1);
+        }
+      } else if (file.content) {
+        await fs.writeFile(destPath, file.content.trim() + "\n", "utf-8");
+      }
+    }
+
+    const relativePath = `${hasSrc ? "src/" : ""}components/ui/`;
+    spinner.stop(pc.green(`✔ Added ${meta.name} into ${relativePath}`));
+  }
+
+  p.outro(pc.green("All components successfully installed!"));
+}
+</file>
+
+<file path="README.md">
+# <img src="./public/favicon.ico" width="48" height="48" align="center" /> Canopy UI
+
+<div align="center">
+
+### Custom UI Components for React & Next.js
+
+A modern npm package for building beautiful, customizable user interfaces.
+
+<br />
+
+[![npm](https://img.shields.io/badge/npm-CB3837?style=for-the-badge\&logo=npm\&logoColor=white)](https://www.npmjs.com/package/@marv3l/canopy-ui)
+[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge\&logo=typescript\&logoColor=white)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/React-20232A?style=for-the-badge\&logo=react\&logoColor=61DAFB)](https://react.dev/)
+[![Next.js](https://img.shields.io/badge/Next.js-000000?style=for-the-badge\&logo=nextdotjs\&logoColor=white)](https://nextjs.org/)
+
+<br />
+
+<a href="https://canopy-ui-web.vercel.app/">
+
+<img src="https://img.shields.io/badge/Documentation-Canopy%20UI-7C3AED?style=for-the-badge&logo=readthedocs&logoColor=white" />
+
+</a>
+
+<a href="https://www.npmjs.com/package/canopy-ui">
+
+<img src="https://img.shields.io/badge/npm-View%20Package-CB3837?style=for-the-badge&logo=npm&logoColor=white" />
+
+</a>
+
+<a href="https://github.com/ShawnR04/canopy-ui">
+
+<img src="https://img.shields.io/badge/GitHub-Repository-181717?style=for-the-badge&logo=github&logoColor=white" />
+
+</a>
+
+</div>
+
+<br />
+
+---
+
+## <img src="https://api.iconify.design/lucide/book-open.svg?color=%233B82F6" width="25" /> About Canopy UI
+
+**Canopy UI** is a customizable UI component library for **React** and **Next.js** applications.
+
+The project is built around a simple idea: provide developers with modern, polished UI components that are easy to integrate and customize.
+
+Canopy UI currently provides a **Toast notification component**, with additional components planned for the future.
+
+> **Simple components. Flexible design. Built for your application.**
+
+---
+
+## <img src="https://api.iconify.design/lucide/layers-3.svg?color=%238B5CF6" width="25" /> Components
+
+<div align="center">
+
+<table>
+<tr>
+
+<td align="center" width="50%">
+
+<img src="https://api.iconify.design/lucide/bell.svg?color=%23F59E0B" width="42" />
+
+<br /><br />
+
+<b>Toast</b>
+
+<br />
+
+Customizable notification component with configurable variants, colors, positioning, durations, and styling.
+
+<br /><br />
+
+<img src="https://img.shields.io/badge/Available-22C55E?style=flat-square&logoColor=white" />
+
+</td>
+
+<td align="center" width="50%">
+
+<img src="https://api.iconify.design/lucide/sparkles.svg?color=%238B5CF6" width="42" />
+
+<br /><br />
+
+<b>More Coming Soon</b>
+
+<br />
+
+Canopy UI is actively growing with additional components planned for future releases.
+
+<br /><br />
+
+<img src="https://img.shields.io/badge/Coming%20Soon-8B5CF6?style=flat-square&logoColor=white" />
+
+</td>
+
+</tr>
+</table>
+
+</div>
+
+---
+
+## <img src="https://api.iconify.design/lucide/sparkles.svg?color=%23F59E0B" width="25" /> Features
+
+<div align="center">
+
+<table>
+<tr>
+
+<td align="center" width="25%">
+
+<img src="https://api.iconify.design/lucide/palette.svg?color=%23EC4899" width="36" />
+
+<br /><br />
+
+<b>Customizable</b>
+
+<br />
+
+Designed to adapt to your application's visual style.
+
+</td>
+
+<td align="center" width="25%">
+
+<img src="https://api.iconify.design/lucide/code-2.svg?color=%238B5CF6" width="36" />
+
+<br /><br />
+
+<b>Developer Friendly</b>
+
+<br />
+
+Built with modern React and TypeScript.
+
+</td>
+
+<td align="center" width="25%">
+
+<img src="https://api.iconify.design/lucide/zap.svg?color=%23F59E0B" width="36" />
+
+<br /><br />
+
+<b>Lightweight</b>
+
+<br />
+
+Focused components without unnecessary complexity.
+
+</td>
+
+<td align="center" width="25%">
+
+<img src="https://api.iconify.design/lucide/settings-2.svg?color=%233B82F6" width="36" />
+
+<br /><br />
+
+<b>Flexible</b>
+
+<br />
+
+Designed to work with your existing application and design system.
+
+</td>
+
+</tr>
+</table>
+
+</div>
+
+---
+
+## <img src="https://api.iconify.design/lucide/book-open.svg?color=%233B82F6" width="25" /> Documentation
+
+The complete Canopy UI documentation is available on the official documentation site.
+
+It includes:
+
+* Component installation
+* Configuration
+* Usage
+* API references
+* Customization
+* Examples
+* CLI documentation
+
+<div align="center">
+
+<a href="https://canopy-ui-web.vercel.app/">
+
+<img src="https://img.shields.io/badge/Read%20the%20Documentation-7C3AED?style=for-the-badge&logo=readthedocs&logoColor=white" />
+
+</a>
+
+</div>
+
+---
+
+## <img src="https://api.iconify.design/lucide/layers.svg?color=%2306B6D4" width="25" /> Tech Stack
+
+<div align="center">
+
+[![React](https://img.shields.io/badge/React-20232A?style=for-the-badge\&logo=react\&logoColor=61DAFB)](https://react.dev/)
+[![Next.js](https://img.shields.io/badge/Next.js-000000?style=for-the-badge\&logo=nextdotjs\&logoColor=white)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge\&logo=typescript\&logoColor=white)](https://www.typescriptlang.org/)
+[![npm](https://img.shields.io/badge/npm-CB3837?style=for-the-badge\&logo=npm\&logoColor=white)](https://www.npmjs.com/)
+
+</div>
+
+---
+
+## <img src="https://api.iconify.design/lucide/heart.svg?color=%23EC4899" width="25" /> Philosophy
+
+Canopy UI is built around a simple principle:
+
+> **Build beautiful UI without unnecessary complexity.**
+
+Components should be easy to integrate, easy to customize, and flexible enough to fit into different applications.
+
+Canopy UI aims to provide a growing collection of components that developers can rely on when building modern interfaces.
+
+---
+
+## <img src="https://api.iconify.design/lucide/rocket.svg?color=%23EF4444" width="25" /> Roadmap
+
+Canopy UI currently includes:
+
+* <img src="https://api.iconify.design/lucide/check-circle-2.svg?color=%2322C55E" width="18" /> Toast
+
+Additional components are planned for future releases.
+
+---
+
+## <img src="https://api.iconify.design/lucide/github.svg?color=%23181717" width="25" /> Repository
+
+Canopy UI is open source and available on GitHub.
+
+<div align="center">
+
+<a href="https://github.com/ShawnR04/canopy-ui">
+
+<img src="https://img.shields.io/badge/View%20Source%20Code-GitHub-181717?style=for-the-badge&logo=github&logoColor=white" />
+
+</a>
+
+</div>
+
+---
+
+## <img src="https://api.iconify.design/lucide/scale.svg?color=%2322C55E" width="25" /> License
+
+Canopy UI is licensed under the **MIT License**.
+
+Copyright © 2026 **Shawn Rimai**
+
+---
+
+<div align="center">
+
+<img src="./public/favicon.ico" width="42" height="42" align="center" /> 
+
+### Canopy UI
+
+**Custom UI. Simple integration. Flexible design.**
+
+<br />
+
+<a href="https://canopy-ui-web.vercel.app/">
+
+<img src="https://img.shields.io/badge/Documentation-Visit%20Canopy%20UI-7C3AED?style=for-the-badge&logo=readthedocs&logoColor=white" />
+
+</a>
+
+<a href="https://www.npmjs.com/package/@marv3l/canopy-ui">
+
+<img src="https://img.shields.io/badge/npm-Canopy%20UI-CB3837?style=for-the-badge&logo=npm&logoColor=white" />
+
+</a>
+
+<a href="https://github.com/ShawnR04/canopy-ui">
+
+<img src="https://img.shields.io/badge/GitHub-ShawnR04-181717?style=for-the-badge&logo=github&logoColor=white" />
+
+</a>
+
+<br /><br />
+
+<sub>Built by Shawn Rimai</sub>
+
+</div>
+</file>
+
+<file path="SETUP.md">
+# Canopy UI
+An accessible, themable React UI component library built for fast-moving web applications.
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/
+licenses/MIT)
+
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
+
+
+## 1. Complete Repository File Structure
+```text
+my-project/
+├── public/ # Static assets, favicons, logos
+├── src/
+│ ├── app/ # Next.js App Router (Pages, layouts, API routes)
+│ │ ├── api/ # Backend endpoints & webhook handlers
+│ │ ├── dashboard/ # Authenticated user dashboard
+│ │ ├── layout.tsx # Root application layout & providers
+│ │ └── page.tsx # Public landing page
+│ ├── components/ # Reusable UI components
+│ │ ├── ui/ # Atomic design system components (buttons, modals)
+│ │ └── forms/ # Interactive form schemas & inputs
+│ ├── db/ # Database schemas, migrations & connection pool
+│ │ ├── index.ts # Database client entry point
+│ │ └── schema.ts # Table schemas (Drizzle / Prisma)
+│ ├── hooks/ # Custom React client hooks
+│ ├── lib/ # Utility helpers, validators, constants
+│ └── types/ # Global TypeScript interfaces & types
+├── .env.example # Environment configuration template
+├── package.json # Dependencies and script definitions
+├── tailwind.config.ts # Tailwind design system configurations
+├── tsconfig.json # TypeScript compiler configuration
+└── README.md
+```
+
+## 2. Project Initialization & Workspace Configuration
+### 2.1 Workplace Setup Commands
+```bash
+# Create project folder, initalize git and initialize npm package
+mkdir canopy-ui && cd canopy-ui
+git init
+npm init -y
+
+# Install runtime dependancies needed for CLI terminal interactions
+npm install commander @clack/prompts picocolors ora execa fs-extra lucide-react
+
+# Install developer tools; Typescript compiler and tsup high-speed ERM budler
+npm install -D typescript @types/node @types/fs-extra tsup
+```
+
+### 2.2 CLI Configuration (`package.json`) - Documented
+### <kbd>package.json</kbd>
+```json
+{
+  "name": "@marv3l/canopy-ui",
+  "version": "1.0.0",
+  "description": "An accessible, themable React UI component library built for fast-moving web applications.",
+  "main": "./dist/index.js",
+  "bin": {
+    "canopy-ui": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "templates"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "prepublishOnly": "npm run build",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ShawnR04/canopy-ui.git"
+  },
+  "keywords": [
+    "react",
+    "ui",
+    "toast",
+    "shadcn",
+    "components",
+    "cli"
+  ],
+  "author": "Shawn Rimai",
+  "license": "MIT",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/ShawnR04/canopy-ui/issues"
+  },
+  "homepage": "https://github.com/ShawnR04/canopy-ui#readme",
+  "dependencies": {
+    "@clack/prompts": "^1.7.0",
+    "commander": "^15.0.0",
+    "execa": "^10.0.1",
+    "fs-extra": "^11.4.0",
+    "lucide-react": "^1.31.0",
+    "ora": "^9.4.1",
+    "picocolors": "^1.1.1"
+  },
+  "devDependencies": {
+    "@types/fs-extra": "^11.0.4",
+    "@types/node": "^26.2.0",
+    "tsup": "^8.5.1",
+    "typescript": "^7.0.2"
+  }
+}
+
+```
+
+### 2.4 Create a `tsup.config.ts` file in the Root directory
+### <kbd>tsup.config.ts</kbd>
+```ts
+import { defineConfig } from "tsup";
+
+export default defineConfig({
+  entry: ["src/index.ts"],
+  format: ["esm"],
+  dts: false,
+  clean: true,
+  banner: {
+    js: "#!/usr/bin/env node",
+  },
+});
+```
+
+### 2.4 Typescript Configuration (`tsconfig.json`) - Documented
+
+#### Creeate the `tsconfig.json` file
+```bash
+npx tsc --init
+```
+### <kbd>tsconfig.json</kbd>
+```json
+{
+  // Visit https://aka.ms/tsconfig to read more about this file
+  "compilerOptions": {
+    // File Layout
+    "rootDir": "./src",
+    "outDir": "./dist",
+
+    // Environment Settings
+    // See also https://aka.ms/tsconfig/module
+    "module": "nodenext",
+    "target": "es2022",
+    "moduleResolution": "nodenext",
+    "esModuleInterop": true,
+    "types": ["node],
+    // For nodejs:
+    // "lib": ["esnext"],
+    // "types": ["node"],
+    // and npm install -D @types/node
+
+    // Other Outputs
+    "sourceMap": true,
+    "declaration": true,
+    "declarationMap": true,
+
+    // Stricter Typechecking Options
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+
+    // Style Options
+    // "noImplicitReturns": true,
+    // "noImplicitOverride": true,
+    // "noUnusedLocals": true,
+    // "noUnusedParameters": true,
+    // "noFallthroughCasesInSwitch": true,
+    // "noPropertyAccessFromIndexSignature": true,
+
+    // Recommended Options
+    "strict": true,
+    "jsx": "react-jsx",
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "noUncheckedSideEffectImports": true,
+    "moduleDetection": "force",
+    "skipLibCheck": true
+  },
+  "include": ["src/**/*"]
+}
+
+```
+
+## 3. Toast Component Source Code
+These files live inside the `templates/toast/` directory of the CLI repository and get written into the customer's `components/ui/` directory
+
+### 3.1 Toast State Management Engine (`templates/toast/use-toast.ts`)
+### <kbd>templates/toast/use-toast.ts</kbd>
+```ts
+"use client";
+
+// Import React runtime and component types
+import * as React from "react";
+// Import semantic SVG icons from lucide-react
+import { CheckCircle2, AlertCircle, AlertTriangle, Info, X } from "lucide-react";
+// Import toast hook and type interfaces
+import { useToast, ToastItem } from "./use-toast";
+
+// Props accepted by the root Toaster container mounted in the root layout
+export interface ToasterProps {
+  // Global lifespan (in milliseconds) for all toasts; defaults to 4000ms
+  defaultDuration?: number;
+  // Screen viewport placement position
+  position?: "top-right" | "bottom-right" | "top-center" | "bottom-center" | "top-left" | "bottom-left";
+}
+
+// Visual preset configurations mapped to your semantic theme tokens
+const variantStyles: Record<
+  string,
+  { bg: string; border: string; text: string; progress: string; icon: any }
+> = {
+  default: {
+    bg: "bg-card",
+    border: "border-border",
+    text: "text-card-foreground",
+    progress: "bg-foreground/20",
+    icon: null,
+  },
+  success: {
+    bg: "bg-success-bg",
+    border: "border-success/40",
+    text: "text-success",
+    progress: "bg-success",
+    icon: CheckCircle2,
+  },
+  error: {
+    bg: "bg-destructive/10",
+    border: "border-destructive/30",
+    text: "text-destructive",
+    progress: "bg-destructive",
+    icon: AlertCircle,
+  },
+  warning: {
+    bg: "bg-warning-bg",
+    border: "border-warning/40",
+    text: "text-warning",
+    progress: "bg-warning",
+    icon: AlertTriangle,
+  },
+  info: {
+    bg: "bg-accent",
+    border: "border-primary/30",
+    text: "text-accent-foreground",
+    progress: "bg-primary",
+    icon: Info,
+  },
+};
+
+// Root Toaster Component placed into layout.tsx
+export function Toaster({ defaultDuration = 4000, position = "top-center" }: ToasterProps) {
+  const { toasts, dismiss } = useToast();
+
+  const positionClasses = {
+    "top-right": "top-4 right-4 items-end",
+    "top-left": "top-4 left-4 items-start",
+    "bottom-right": "bottom-4 right-4 items-end",
+    "bottom-left": "bottom-4 left-4 items-start",
+    "top-center": "top-4 left-1/2 -translate-x-1/2 items-center",
+    "bottom-center": "bottom-4 left-1/2 -translate-x-1/2 items-center",
+  }[position];
+
+  return (
+    <>
+      <style>{`
+        @keyframes toast-progress {
+          from {
+            transform: scaleX(1);
+          }
+          to {
+            transform: scaleX(0);
+          }
+        }
+      `}</style>
+
+      <div className={`fixed z-50 pointer-events-none flex flex-col gap-2 p-4 w-full max-w-sm ${positionClasses}`}>
+        {toasts.map((item) => (
+          <ToastElement
+            key={item.id}
+            toast={item}
+            defaultDuration={defaultDuration}
+            onDismiss={() => dismiss(item.id)}
+          />
+        ))}
+      </div>
+    </>
+  );
+}
+
+// Atomic Toast Card Component
+function ToastElement({
+  toast,
+  defaultDuration,
+  onDismiss,
+}: {
+  toast: ToastItem;
+  defaultDuration: number;
+  onDismiss: () => void;
+}) {
+  const duration = toast.duration ?? defaultDuration;
+
+  React.useEffect(() => {
+    if (duration <= 0) return;
+    const timer = setTimeout(() => {
+      onDismiss();
+    }, duration);
+    return () => clearTimeout(timer);
+  }, [duration, onDismiss]);
+
+  const variant = toast.variant || "default";
+  const defaultStyle = variantStyles[variant] || variantStyles.default;
+  const IconComponent = defaultStyle.icon;
+
+  // 1. Only build inline styles for values that are explicitly provided
+  const customInlineStyle: React.CSSProperties = {};
+  if (toast.customColor?.bg) customInlineStyle.backgroundColor = toast.customColor.bg;
+  if (toast.customColor?.border) customInlineStyle.borderColor = toast.customColor.border;
+  if (toast.customColor?.text) customInlineStyle.color = toast.customColor.text;
+
+  // 2. Prevent default Tailwind classes from overriding user custom classes or inline styles
+  const userHasBg = Boolean(toast.customColor?.bg || toast.className?.match(/(?:^|\s)bg-/));
+  const userHasBorder = Boolean(toast.customColor?.border || toast.className?.match(/(?:^|\s)border-/));
+  const userHasText = Boolean(toast.customColor?.text || toast.className?.match(/(?:^|\s)text-/));
+
+  return (
+    <div
+      style={customInlineStyle}
+      className={`pointer-events-auto relative overflow-hidden flex items-start gap-3 w-full p-4 rounded-[var(--radius-lg,0.625rem)] border shadow-lg transition-all duration-200 backdrop-blur-sm ${
+        !userHasBg ? defaultStyle.bg : ""
+      } ${!userHasBorder ? defaultStyle.border : ""} ${
+        !userHasText ? defaultStyle.text : ""
+      } ${toast.className || ""}`}
+    >
+      {/* Render icon if preset defines one */}
+      {IconComponent && (
+        <IconComponent
+          className="w-5 h-5 mt-0.5 shrink-0"
+          style={{ color: toast.customColor?.icon }}
+        />
+      )}
+
+      {/* Toast Content Area */}
+      <div className="flex-1 text-sm space-y-1">
+        {toast.title && <div className="font-semibold leading-tight">{toast.title}</div>}
+        {toast.description && (
+          <div className="opacity-90 leading-relaxed text-xs">
+            {toast.description}
+          </div>
+        )}
+        {toast.action && <div className="pt-1">{toast.action}</div>}
+      </div>
+
+      {/* Close button */}
+      <button
+        onClick={onDismiss}
+        className="p-1 rounded-md opacity-70 hover:opacity-100 hover:bg-foreground/10 transition-colors"
+      >
+        <X className="w-4 h-4" />
+      </button>
+
+      {/* Animated Lifespan Progress Bar */}
+      {duration > 0 && (
+        <div
+          className={`absolute bottom-0 left-0 right-0 h-1 origin-left ${
+            !toast.customColor?.progress ? defaultStyle.progress : ""
+          }`}
+          style={{
+            backgroundColor: toast.customColor?.progress,
+            animation: `toast-progress ${duration}ms linear forwards`,
+          }}
+        />
+      )}
+    </div>
+  );
+}
+```
+
+### 3.2 Toast UI Container and Renderer (`templates/toast/toast.tsx`)
+### <kbd>templates/toast/toast.tsx</kbd>
+```tsx
+// Import React runtime and component types
+import * as React from "react";
+// Import semantic sVG icons from lucide-react
+import { CheckCircle2, AlertCircle, AlertTriangle, Info ,X} from "lucide-react";
+// Import toast hook and type interfaces
+import { useToast, ToastItem } from "./use-toast";
+
+// Props accepted by the root Toaster container mounted in the root layout
+export interface ToasterProps {
+    // Global lifespan (in milliseconds) for all toasts; defaults to 400ms
+    defaultDuration?: number;
+    //Screen viewport placement position
+    position?: "top-right" | "bottom-right" | "top-center" | "bottom-center" | "top-left" | "bottom-left";
+}
+// Visual preset configurations defining Tailwind colors and associated icons
+//TODO: Add `progress: string` in the dictionary
+const variantSyles : Record<string, {bg: string; border: string; text: string; icon: any}> = {
+    //Neutral default theme
+    default: {
+        bg: "bg-slate-900",
+        border: "border-slate-800",
+        text: "text-slate-100",
+        //progress: "bg-slate-100",
+        icon: null,
+    },
+
+    //Success preset: Emerald theme with Check icon
+    success: {
+        bg: "bg-emerald-950/90",
+        border: "border-emerald-700/60",
+        text: "text-emerald-200",
+        //progress: "text-emerald-200",
+        icon: CheckCircle2
+    },
+
+    // Error preset: Rose theme with AlertCircle
+    error: {
+        bg: "bg-rose-950/90",
+        border: "border-rose-700/60",
+        text: "text-rose-200",
+        //progress: "text-rose-200",
+        icon: AlertCircle
+    },
+
+    //Warning preset: Amber theme with AlertTriangle icon
+    warning: {
+        bg: "bg-amber-950/90",
+        border: "border-amber-700/60",
+        text: "text-amber-200",
+        //progress: "text-amber-200",
+        icon: AlertTriangle
+    },
+
+    //Informational preset: Sky blue theme with Info iocn
+    info: {
+        bg: "bg-sky-950/90",
+        border: "border-sky-700/60",
+        text: "text-sky-200",
+        //progress: "text-sky-200",
+        icon: Info
+    },
+}
+
+// Root Toaster Component placed into layout.tsx
+export function Toaster({ defaultDuration = 400, position = "top-center"}: ToasterProps){
+    // Extract real-time toast arary and dismiss helper from custom hook
+    const { toasts, dismiss } = useToast();
+
+    // Map position prop to Tailwind absolute positioning classes
+    const positionClasses = {
+        "top-right" : "top-4 right-4 items-end",
+        "top-left" : "top-4 left-4 items-start",
+        "bottom-right" : "bottom-4 right-4 items-end",
+        "bottom-left" : "bottom-4 left-4 items-start",
+        "top-center" : "top-4 left-1/2 -translate-x-1/2 items-center",
+        "bottom-center" : "bottom-4 left-1/2 -translate-x-1/2 items-center",
+    }[position];
+
+    return (
+        // Fixed viewport container ; pointer-events-none ensures it doesn't block background clicks
+        <div className={`fixed z-50 pointer-none flex flex-col gap-2 p-4 w-full max-w-sm ${positionClasses}`}>
+            {/* Map through active toast state and render atomic  toast items */}
+            {toasts.map((item) => (
+                <ToastElement
+                    key={item.id}
+                    toast={item}
+                    defaultDuration={defaultDuration}
+                    onDismiss={() => dismiss(item.id)}
+                />
+            ))}
+        </div>
+    );
+}
+
+// Atomic Toast Card Component
+function ToastElement({
+    toast,
+    defaultDuration,
+    onDismiss,
+}: {
+    toast: ToastItem;
+    defaultDuration: number;
+    onDismiss: () => void;
+}) {
+    // Priority: toast.duration > layout defaultDuration
+    const duration = toast.duration ?? defaultDuration;
+
+    // Set up auto-dismiss timer on component mount
+    React.useEffect(() => {
+        // If duration is set to <= 0, toast stays on screen indefinitely until manual dismissal
+        if (duration <= 0) return;
+        // Schedule dismissal
+        const timer = setTimeout(() => {
+            onDismiss();
+        }, duration);
+        // Clean up timer when toast unmounts or duration changes
+        return () => clearTimeout(timer);
+    }, [duration, onDismiss]);
+
+    // Resolve visual preset or fall back to default
+    const variant = toast.variant || "default"
+    const defaultStyle = variantSyles[variant] || variantSyles.default;
+    const IconComponent = defaultStyle.icon;
+
+    // Inline style overrides for user-specified dynamic colors
+    const customInlineStyle: React.CSSProperties ={
+        backgroundColor: toast.customColor?.bg,
+        borderColor: toast.customColor?.border,
+        //progress: toast.customColor?.progress,
+        color: toast.customColor?.text,
+    };
+
+    return (
+        // Card container with pointer-events-none to re-enable interaction on the toast itself
+        <div 
+            style={customInlineStyle}
+            className={` pointer-events-auto flex items-start gap-3 w-full p-4 rounded-lg border shadow-lg
+                transition-all duration-200 backdrop-blur-sm 
+                ${!toast.customColor?.bg ? defaultStyle.bg : ""} 
+                ${!toast.customColor?.border ? defaultStyle.border : ""} 
+                ${!toast.customColor?.text ? defaultStyle.text : ""}
+                ${toast.className || ""}
+            `}
+        >
+            {/* Render icon if preset defines one */}
+            {IconComponent && (
+                <IconComponent
+                    className="w-5 h-5 mt-0.5 shrink-0"
+                    style={{ color: toast.customColor?.icon}}
+                />
+            )}
+            {/* Toast Content Area */}
+            <div className="flex-1 text-sm space-y-1">
+                {/* Title rendering */}
+                {toast.title && <div className="font-semibold">{toast.title}</div>}
+                {/* Description rendering */}
+                {toast.description && (
+                    <div className="opacity-90 leading-relaxed text-xs">
+                        {toast.description}
+                    </div>
+                )}
+                {/* Action button/node rendering */}
+                {toast.action && <div className="pt-1">{toast.action}</div>}
+            </div>
+            {/* Close button */}
+            <button 
+                onClick={onDismiss}
+                className="p-1 rounded-md opacity-70 hover:opacity-100 hover:bg-slate-800/40 transition-colors"
+            >
+                <X className="w-4 h-4" />
+            </button>
+        </div>
+    );
+}
+```
+
+## 4. CLI Engine & Registry Source Code
+### 4.1 Component Registry Index (`src/registry.ts`) - Documented
+### <kbd>src/registry.ts</kbd>
+```ts
+// Type interface specifying component metadata and dependancy requirements
+export interface ComponentMeta {
+    // Human-readable title
+    name: string;
+    // Production npm packages requierd by this component
+    dependencies: string[];
+    // Developmemnt dependancies required by this component
+    devDependencies?: string[];
+    // File distribution mappings
+    files: {
+        // Relative path to file inside the CLI package's templates/ folder
+        templatePath: string;
+        // Filename written inside teh consumer project's components/ui folder
+        targetName: string;
+    }[];
+}
+
+// Central catalog mapping component aliases to metadata definitions
+export const REGISTRY: Record<string,ComponentMeta> = {
+    // Toast component registration
+    toast: {
+        name: "Custom Toast Notification System",
+        // Packages to automatically install in consumer project
+        dependencies: ["lucide-react", "clsx", "tailwind-merge"],
+        files: [
+            {
+                templatePath: "toast/toast.tsx",
+                targetName: "toast.tsx",
+            },
+            {
+                templatePath: "toast/use-toast.ts",
+                targetName: "use-toast.ts"
+            },
+        ],
+    },
+    // Future components (dialog, sheet, dropdown) are added here
+}
+```
+
+### 4.2 Installer & Copy Engine (`src/commands/add.ts`) - Documented
+### <kbd>src/commands/add.ts</kbd>
+```ts
+// Native Node.js path utilities
+import path from "node:path";
+// Helper to derive __dirname in ESM
+import { fileURLToPath } from "node:url";
+// File system helper with promise support
+import fs from "fs-extra";
+// Subprocess execution library for running npm commands
+import { execa } from "execa";
+// Modern interactive CLI prompts
+import * as p from "@clack/prompts"
+// Terminal color styling
+import pc from "picocolors";
+// Component registry index
+import  { REGISTRY } from "../registry.js";
+
+// Derive current directory path in ES Module environment
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Main execution function for adding components
+export async function add(componentKeys: string[]) {
+    // Print styled welcome banner in terminal
+    p.intro(pc.bgCyan(pc.black(" Canopy UI")));
+
+    // Hold list of components to install
+    let selected = componentKeys;
+
+    // If user did'nt specify components in CLI args, prompt with interactive multi-select
+    if (!selected || selected.length === 0) {
+        // Generate prompt choices from registered components
+        const choices = Object.keys(REGISTRY).map((key) => ({
+            value: key,
+            label: `${REGISTRY[key]?.name} (${key})`,
+        }));
+
+        // Display interactive terminal multi-select
+        const response = await p.multiselect({
+            message: "Select UI components to install:",
+            options: choices,
+            required:true,
+        });
+
+        // Handle user cancellation (Ctrl+C / Esc)
+        if (p.isCancel(response)) {
+            p.cancel("Operation aborted.");
+            process.exit(0);
+        }
+        selected = response as string[];
+    }
+
+    // Get path to current user workspace
+    const projectRoot = process.cwd();
+    // Target destination directory: /components/ui
+    const targetDir = path.join(projectRoot, "components", "ui");
+    // Ensure the destination directory exists (create recursively if missing)
+    await fs.ensureDir(targetDir);
+
+    // Initialize terminal animated progress spinner
+    const spinner = p.spinner();
+
+    // Iterate over each selected component identifier
+    for (const key of selected) {
+        const meta = REGISTRY[key];
+        // Guard against invalid component keys
+        if (!meta) {
+            p.log.error(`Component "${key}" was not found in registry.`);
+            continue;
+        }
+
+        // Start progress spinner
+        spinner.start(`Copying ${meta.name} source files.`)
+
+        // Copy each template file to user's codebase
+        for (const file of meta.files) {
+            // Resolve path to bundled template within  the installed package
+            const srcPath = path.resolve(__dirname, "../../templates", file.templatePath);
+            // Resolve destiantion path in user's project
+            const destPath = path.join(targetDir, file.targetName);
+
+            // Verify templaet file exisits in package bundle
+            if (await fs.pathExists(srcPath)) {
+                // Copy file and overwrite existing version
+                await fs.copy(srcPath, destPath, { overwrite: true });
+            } else {
+                spinner.stop(pc.red(`Template file missing: ${file.templatePath}`));
+                return;
+            }
+        }
+
+        // INstall required dependancies ifn specified
+        if (meta.dependencies.length > 0) {
+            spinner.message(`Installing required npm packages: ${meta.dependencies.join(", ")}...`);
+            // Run npm install in user's root directory
+            await execa("npm", ["install", ...meta.dependencies], { cwd: projectRoot });
+        }
+
+        // Mark comletion for current component
+        spinner.stop(pc.green(`✔ Added ${meta.name} into components/ui/`))
+    }
+
+    // Final success message
+    p.outro(pc.green("All components successfully installed!"))
+}
+
+```
+
+### 4.1 CLI Entry Router (`src/index.ts`) - Documented
+### <kbd>src/index.ts</kbd>
+```ts
+// Import Commander framework for CLLI argument parsing
+import { Command } from "commander";
+// Import add command handler
+import { add } from "./commands/add.js"
+
+// Initialize command program instance
+const program = new Command();
+
+// Configure CLI identity and metadata
+program
+    .name("Canopy UI")
+    .description("Install custom modular UI components directly to your project")
+    .version("1.0.0");
+
+// Define 'add' command with variadic component arguments
+program
+ .command("add")
+ .description("Add a component to your project")
+ .argument("[components...]", "Component identifiers (e.g., toast")
+ .action(async (components: string[]) => {
+    // Invoke add handlerwith parsed component names
+    await add(components);
+ });
+
+// Parse command line arguments from process.argv
+program.parse(process.argv);
+```
+
+## 5. How the User Consumes the Installed Toast
+### 5.1 Mounted in Root Layout (`app/layout.tsx`)
+Duration is configured in the root level
+### <kbd>app/layout.tsx</kbd>
+```tsx
+import { Toaster } from "@/components/ui/toast";
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+    return (
+        <html lang="en">
+            <body>
+                {children}
+                {/* Set global default duration (3500ms) and viewport position */}
+                <Toaster defaultDuration={3500} position="bottom-right" />
+            </body>
+        </html>
+    );
+}
+
+```
+
+### 5.2 Invoking Toasts with Built-in Variants & Custom Colors
+### <kbd>app/page.tsx</kbd>
+```tsx
+"use client";
+
+import { toast } from "@/components/ui/use-toast";
+
+export default function Page() {
+  return (
+    <div className="p-8 flex flex-wrap gap-4 items-center min-h-screen bg-background text-foreground">
+      {/* 1. Success Variant */}
+      <button
+        className="px-4 py-2 text-sm font-medium rounded-md bg-success text-success-foreground hover:opacity-90 transition-opacity"
+        onClick={() =>
+          toast({
+            variant: "success",
+            title: "Changes Saved",
+            description: "Your preferences were updated successfully.",
+          })
+        }
+      >
+        Success Toast
+      </button>
+
+      {/* 2. Error / Destructive Variant */}
+      <button
+        className="px-4 py-2 text-sm font-medium rounded-md bg-destructive text-destructive-foreground hover:opacity-90 transition-opacity"
+        onClick={() =>
+          toast({
+            variant: "error",
+            title: "Action Failed",
+            description: "Could not connect to the remote server.",
+          })
+        }
+      >
+        Error Toast
+      </button>
+
+      {/* 3. Custom CSS Variables & Progress Bar */}
+      <button
+        className="px-4 py-2 text-sm font-medium rounded-md bg-secondary text-secondary-foreground hover:opacity-90 transition-opacity"
+        onClick={() =>
+          toast({
+            title: "Pro Subscription Unlocked",
+            description: "Welcome to VIP perks and custom styling.",
+            duration: 5000,
+            customColor: {
+              bg: "var(--card)",
+              border: "var(--primary)",
+              text: "var(--card-foreground)",
+              icon: "var(--primary)",
+              progress: "var(--primary)",
+            },
+          })
+        }
+      >
+        Custom Token Toast
+      </button>
+
+      {/* 4. Direct ClassName Override */}
+      <button
+        className="px-4 py-2 text-sm font-medium rounded-md border border-border text-foreground hover:bg-muted transition-colors"
+        onClick={() =>
+          toast({
+            title: "Tailwind Classes Applied",
+            description: "Styled with direct className overrides.",
+            duration: 3500,
+            customColor: {
+              progress: "var(--destructive)",
+            },
+            className: "border-destructive/40 text-primary bg-card",
+          })
+        }
+      >
+        ClassName Override Toast
+      </button>
+    </div>
+  );
+}
+
+```
+
+## 6. Local Testing , Git and npm Publishing Procedures
+### Local Verification Steps
+
+1. Compile the CLI: `npm run build` inside `canopy-ui`.
+2. Create a global symlink: `npm link`.
+3. Navigate to a test Next.js app and run: `canopy-ui add toast`.
+4. Verify that `components/ui.toast.tsx` and `components/ui/use-toast.ts` exist and dependencies are installed
+5. Clean up synlink: `npm unlink` in the CLI folder
+
+### Git and GitHub Repository Initialization
+```bash
+git init
+git add .
+git commit -m "feat: initial commit with CLI engine, toast template, and documentation"
+git branch -M main
+git remote add origin https://github.com/ShawnR04/canopy-ui.git
+git push -u origin main
+
+```
+
+### Publishing to npm Registry
+```bash
+# Step 1: Log in with credentials
+npm login
+# Step 2: Validate package bundle in dry-run mode
+npm publish --dry-run
+# Step 3: Publish package publicly to npm
+npm publish --access public
+
+```
+
+## 7. Automated CI/CD Deployment (Github Actions)
+### <kbd>.github/workflows/publish.yml</kbd>
+
+# Publishing Updates to My NPM Package
+
+Use this checklist whenever you want to publish a new version of your package to npm.
+
+## 1. Make Your Changes
+
+Update your package code and test everything locally.
+
+```bash
+npm run build
+```
+
+Run your tests if your project has them:
+
+```bash
+npm test
+```
+
+## 2. Update the Version
+
+Choose the appropriate version type:
+
+```bash
+npm version patch
+```
+
+For bug fixes: `1.0.0` → `1.0.1`
+
+```bash
+npm version minor
+```
+
+For new backwards-compatible features: `1.0.0` → `1.1.0`
+
+```bash
+npm version major
+```
+
+For breaking changes: `1.0.0` → `2.0.0`
+
+## 3. Publish to npm
+
+Make sure you are logged in:
+
+```bash
+npm login
+```
+
+Then publish the update:
+
+```bash
+npm publish
+```
+
+For a scoped public package, use:
+
+```bash
+npm publish --access public
+```
+
+## 4. Verify the Update
+
+Check the published package:
+
+```bash
+npm view <your-package-name> version
+```
+
+You can also check it directly on the npm website.
+
+## Quick Update Workflow
+```bash
+git add .
+git commit -m "commit note here"
+git push
+```
+
+```bash
+npm run build
+npm test
+npm version patch
+npm publish
+```
+
+Replace `patch` with `minor` or `major` when appropriate.
+</file>
+
+<file path="package.json">
+{
+  "name": "@marv3l/canopy-ui",
+  "version": "1.4.1",
+  "description": "An accessible, themable React UI component library built for fast-moving web applications.",
+  "main": "./dist/index.js",
+  "bin": {
+    "canopy-ui": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "templates"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "prepublishOnly": "npm run build",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ShawnR04/canopy-ui.git"
+  },
+  "keywords": [
+    "react",
+    "ui",
+    "toast",
+    "shadcn",
+    "components",
+    "cli"
+  ],
+  "author": "Shawn Rimai",
+  "license": "MIT",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/ShawnR04/canopy-ui/issues"
+  },
+  "homepage": "https://github.com/ShawnR04/canopy-ui#readme",
+  "dependencies": {
+    "@clack/prompts": "^1.7.0",
+    "@radix-ui/react-slot": "^1.3.3",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "commander": "^15.0.0",
+    "execa": "^10.0.1",
+    "fs-extra": "^11.4.0",
+    "lucide-react": "^1.31.0",
+    "ora": "^9.4.1",
+    "picocolors": "^1.1.1",
+    "prompts": "^2.4.2",
+    "tailwind-merge": "^3.6.0"
+  },
+  "devDependencies": {
+    "@types/fs-extra": "^11.0.4",
+    "@types/node": "^26.3.0",
+    "@types/prompts": "^2.4.9",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.7",
+    "tsup": "^8.5.1",
+    "typescript": "^7.0.2"
+  }
+}
+</file>
+
+</files>

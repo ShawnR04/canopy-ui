@@ -12,6 +12,8 @@ import * as p from "@clack/prompts";
 import pc from "picocolors";
 // Component registry index
 import { REGISTRY } from "../registry.js";
+// Design tokens CSS template
+import { CANOPY_THEME_CSS } from "../templates/theme.js";
 
 // Derive current directory path safely in both ES Module and CommonJS environments
 const getDirname = () => {
@@ -22,6 +24,31 @@ const getDirname = () => {
 };
 
 const currentDir = getDirname();
+
+/**
+ * Resolves the location of a template file across development and built distributions
+ */
+async function resolveTemplatePath(templateSubPath: string): Promise<string | null> {
+  const candidatePaths = [
+    // 1. Production bundle (with "src/templates" in package.json files array)
+    path.resolve(currentDir, "../src/templates", templateSubPath),
+    // 2. Nested cli bundle (dist/cli/index.js -> ../../src/templates)
+    path.resolve(currentDir, "../../src/templates", templateSubPath),
+    // 3. Fallback if templates is at package root
+    path.resolve(currentDir, "../templates", templateSubPath),
+    path.resolve(currentDir, "../../templates", templateSubPath),
+    // 4. Fallback relative to project root
+    path.resolve(process.cwd(), "src/templates", templateSubPath),
+  ];
+
+  for (const candidate of candidatePaths) {
+    if (await fs.pathExists(candidate)) {
+      return candidate;
+    }
+  }
+
+  return null;
+}
 
 /**
  * Detects the active package manager used in the target project workspace
@@ -36,6 +63,52 @@ async function detectPackageManager(projectRoot: string): Promise<"pnpm" | "yarn
     return "bun";
   }
   return "npm";
+}
+
+/**
+ * Finds the project's root stylesheet and injects design tokens if not already present
+ */
+async function injectGlobalsCss(projectRoot: string): Promise<void> {
+  const cssCandidates = [
+    path.join(projectRoot, "app/globals.css"),
+    path.join(projectRoot, "src/app/globals.css"),
+    path.join(projectRoot, "styles/globals.css"),
+    path.join(projectRoot, "src/styles/globals.css"),
+    path.join(projectRoot, "src/index.css"),
+  ];
+
+  let targetCss: string | null = null;
+  for (const candidate of cssCandidates) {
+    if (await fs.pathExists(candidate)) {
+      targetCss = candidate;
+      break;
+    }
+  }
+
+  if (!targetCss) {
+    p.log.warn(pc.yellow("⚠ Could not locate a globals.css or index.css to inject design tokens."));
+    return;
+  }
+
+  const existingContent = await fs.readFile(targetCss, "utf-8");
+
+  // Prevent duplicate injections
+  if (
+    existingContent.includes("Canopy UI Design Tokens") ||
+    existingContent.includes("--color-primary") ||
+    existingContent.includes("--primary:")
+  ) {
+    return;
+  }
+
+  await fs.writeFile(
+    targetCss,
+    `${existingContent.trimEnd()}\n\n${CANOPY_THEME_CSS.trim()}\n`,
+    "utf-8"
+  );
+
+  const relativePath = path.relative(projectRoot, targetCss);
+  p.log.success(pc.green(`✔ Injected Canopy UI design tokens into ${relativePath}`));
 }
 
 /**
@@ -68,6 +141,10 @@ export async function add(componentKeys: string[]) {
   const projectRoot = process.cwd();
   const pkgManager = await detectPackageManager(projectRoot);
 
+  // 1. Ensure globals.css has design tokens before copying files
+  await injectGlobalsCss(projectRoot);
+
+  // 2. Setup target component directory
   const hasSrc = await fs.pathExists(path.join(projectRoot, "src"));
   const targetDir = hasSrc
     ? path.join(projectRoot, "src", "components", "ui")
@@ -87,7 +164,7 @@ export async function add(componentKeys: string[]) {
 
     spinner.start(`Setting up ${meta.name}...`);
 
-    // 1. Install dependencies if any exist
+    // 3. Install dependencies if any exist
     const allDependencies = [
       ...(meta.packageName ? [meta.packageName] : []),
       ...(meta.dependencies || []),
@@ -118,20 +195,20 @@ export async function add(componentKeys: string[]) {
       }
     }
 
-    // 2. Copy template files or write stubs
+    // 4. Copy template files or write stubs
     spinner.message(`Creating component files for ${meta.name}...`);
 
     for (const file of meta.files) {
       const destPath = path.join(targetDir, file.targetName);
 
       if (file.templatePath) {
-        // Resolve path relative to the bundle execution context
-        const srcPath = path.resolve(currentDir, "../templates", file.templatePath);
-        if (await fs.pathExists(srcPath)) {
-          await fs.copy(srcPath, destPath, { overwrite: true });
+        const resolvedSrc = await resolveTemplatePath(file.templatePath);
+
+        if (resolvedSrc) {
+          await fs.copy(resolvedSrc, destPath, { overwrite: true });
         } else {
           spinner.stop(pc.red(`Template file missing: ${file.templatePath}`));
-          p.log.warn(pc.dim(`Looked at path: ${srcPath}`));
+          p.log.warn(pc.dim(`Searched relative to: ${currentDir}`));
           p.cancel("Component generation aborted.");
           process.exit(1);
         }

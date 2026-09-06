@@ -1,4 +1,3 @@
-// src/registry.ts
 export interface ComponentMeta {
   name: string;
   packageName?: string;
@@ -10,14 +9,31 @@ export interface ComponentMeta {
   }>;
 }
 
+// src/registry.ts
 export const REGISTRY: Record<string, ComponentMeta> = {
   toast: {
     name: "Toast",
-    dependencies: ["lucide-react"], // Peer dependencies to install in consumer app
+    dependencies: ["lucide-react"],
     files: [
       {
         targetName: "toast.tsx",
         templatePath: "toast/toast.tsx",
+      },
+    ],
+  },
+  button: {
+    name: "Button",
+    dependencies: [
+      "@radix-ui/react-slot",
+      "class-variance-authority",
+      "clsx",
+      "tailwind-merge",
+      "lucide-react",
+    ],
+    files: [
+      {
+        targetName: "button.tsx",
+        templatePath: "button/button.tsx",
       },
     ],
   },

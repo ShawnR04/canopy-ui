@@ -42,3 +42,17 @@ Thumbs.db
 !.vscode/extensions.json
 !.vscode/settings.json
 .idea/
+
+# Ignore source code except templates
+src/cli/
+src/commands/
+src/index.ts
+src/registry.ts
+
+# Ignore development configs
+tsconfig.json
+tsup.config.ts
+.github/
+USAGE.md
+SETUP.md
+*.log

@@ -84,9 +84,6 @@ export interface VariantStyle {
 // 2. HELPER UTILITIES
 // =============================================================================
 
-/**
- * Robust equality check for deduplication supporting primitives and keyed JSX.
- */
 function areNodesEqual(a: React.ReactNode, b: React.ReactNode): boolean {
   if (a === b) return true;
   if (typeof a !== typeof b) return false;
@@ -120,85 +117,78 @@ function getPositionSnapshot(): ToastPosition {
 }
 
 // =============================================================================
-// 4. THE COSTUME CLOSET (Variant Color & Icon Themes)
+// 4. THE COSTUME CLOSET (Solid bg-card with primary status-colored text & accents)
 // =============================================================================
 
 const variantStyles: Record<ToastVariant, VariantStyle> = {
   default: {
-    bg: "bg-card dark:bg-neutral-900/95",
-    border: "border-border dark:border-neutral-700/80",
-    title: "text-neutral-900 dark:text-neutral-50",
-    description: "text-neutral-600 dark:text-neutral-200",
-    progress: "bg-neutral-900/20 dark:bg-neutral-400",
-    iconColor: "text-neutral-700 dark:text-neutral-300",
-    badge:
-      "bg-neutral-200 text-neutral-800 dark:bg-neutral-800 dark:text-neutral-100 border-neutral-300 dark:border-neutral-700",
+    bg: "bg-card",
+    border: "border-border",
+    title: "text-foreground",
+    description: "text-muted-foreground",
+    progress: "bg-primary",
+    iconColor: "text-primary",
+    badge: "bg-secondary text-secondary-foreground border-border",
     icon: null,
   },
   custom: {
-    bg: "bg-card dark:bg-neutral-900/95",
-    border: "border-border dark:border-neutral-700/80",
-    title: "text-neutral-900 dark:text-neutral-50",
-    description: "text-neutral-600 dark:text-neutral-200",
-    progress: "bg-neutral-900/20 dark:bg-neutral-400",
-    iconColor: "text-neutral-700 dark:text-neutral-300",
-    badge:
-      "bg-neutral-200 text-neutral-800 dark:bg-neutral-800 dark:text-neutral-100 border-neutral-300 dark:border-neutral-700",
+    bg: "bg-card",
+    border: "border-border",
+    title: "text-foreground",
+    description: "text-muted-foreground",
+    progress: "bg-primary",
+    iconColor: "text-primary",
+    badge: "bg-secondary text-secondary-foreground border-border",
     icon: null,
   },
   success: {
-    bg: "bg-emerald-50 dark:bg-emerald-950/60",
-    border: "border-emerald-500/40 dark:border-emerald-500/50",
-    title: "text-emerald-950 dark:text-emerald-100",
-    description: "text-emerald-800 dark:text-emerald-200/90",
-    progress: "bg-emerald-600 dark:bg-emerald-400",
-    iconColor: "text-emerald-600 dark:text-emerald-400",
-    badge:
-      "bg-emerald-100 text-emerald-900 dark:bg-emerald-900/80 dark:text-emerald-100 border-emerald-300 dark:border-emerald-700",
+    bg: "bg-card",
+    border: "border-success/60 dark:border-success/70",
+    title: "text-success",
+    description: "text-success/80 dark:text-success/90",
+    progress: "bg-success",
+    iconColor: "text-success",
+    badge: "bg-success/15 text-success border-success/40",
     icon: CheckCircle2,
   },
   error: {
-    bg: "bg-red-50 dark:bg-red-950/60",
-    border: "border-red-500/30 dark:border-red-500/50",
-    title: "text-red-950 dark:text-red-100",
-    description: "text-red-800 dark:text-red-200/90",
-    progress: "bg-red-600 dark:bg-red-400",
-    iconColor: "text-red-600 dark:text-red-400",
-    badge:
-      "bg-red-100 text-red-900 dark:bg-red-900/80 dark:text-red-100 border-red-300 dark:border-red-700",
+    bg: "bg-card",
+    border: "border-destructive/60 dark:border-destructive/70",
+    title: "text-destructive",
+    description: "text-destructive/80 dark:text-destructive/90",
+    progress: "bg-destructive",
+    iconColor: "text-destructive",
+    badge: "bg-destructive/15 text-destructive border-destructive/40",
     icon: AlertCircle,
   },
   warning: {
-    bg: "bg-amber-50 dark:bg-amber-950/60",
-    border: "border-amber-500/40 dark:border-amber-500/50",
-    title: "text-amber-950 dark:text-amber-100",
-    description: "text-amber-800 dark:text-amber-200/90",
-    progress: "bg-amber-600 dark:bg-amber-400",
-    iconColor: "text-amber-600 dark:text-amber-400",
-    badge:
-      "bg-amber-100 text-amber-900 dark:bg-amber-900/80 dark:text-amber-100 border-amber-300 dark:border-amber-700",
+    bg: "bg-card",
+    border: "border-warning/60 dark:border-warning/70",
+    title: "text-warning",
+    description: "text-warning/80 dark:text-warning/90",
+    progress: "bg-warning",
+    iconColor: "text-warning",
+    badge: "bg-warning/15 text-warning border-warning/40",
     icon: AlertTriangle,
   },
   info: {
-    bg: "bg-sky-50 dark:bg-sky-950/60",
-    border: "border-sky-500/30 dark:border-sky-500/50",
-    title: "text-sky-950 dark:text-sky-100",
-    description: "text-sky-800 dark:text-sky-200/90",
-    progress: "bg-sky-600 dark:bg-sky-400",
-    iconColor: "text-sky-600 dark:text-sky-400",
-    badge:
-      "bg-sky-100 text-sky-900 dark:bg-sky-900/80 dark:text-sky-100 border-sky-300 dark:border-sky-700",
+    bg: "bg-card",
+    border: "border-info/60 dark:border-info/70",
+    title: "text-info",
+    description: "text-info/80 dark:text-info/90",
+    progress: "bg-info",
+    iconColor: "text-info",
+    badge: "bg-info/15 text-info border-info/40",
     icon: Info,
   },
   loading: {
-    bg: "bg-card dark:bg-neutral-900/95",
-    border: "border-border dark:border-neutral-700/80",
-    title: "text-neutral-900 dark:text-neutral-50",
-    description: "text-neutral-600 dark:text-neutral-200",
-    progress: "bg-primary dark:bg-sky-400",
-    iconColor: "text-primary dark:text-sky-400 animate-spin",
-    badge:
-      "bg-neutral-200 text-neutral-800 dark:bg-neutral-800 dark:text-neutral-100 border-neutral-300 dark:border-neutral-700",
+    bg: "bg-card",
+    border: "border-border",
+    title: "text-foreground",
+    description: "text-muted-foreground",
+    progress: "bg-primary",
+    iconColor: "text-primary animate-spin",
+    badge: "bg-secondary text-secondary-foreground border-border",
     icon: Loader2,
   },
 };
@@ -516,7 +506,7 @@ export function Toaster({ defaultDuration = 4000, position }: ToasterProps) {
           100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
         }
 
-        /* DIRECTIONAL EXITS (Translate + Fade + Height Collapse) */
+        /* DIRECTIONAL EXITS */
         @keyframes toast-slide-out-right {
           0% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); max-height: 200px; margin-bottom: 0px; }
           40% { opacity: 0; transform: translate3d(105%, 0, 0) scale(0.92); }
@@ -655,7 +645,6 @@ function ToastElement({
   const isError = variant === "error";
 
   const handleAnimationEnd = (e: React.AnimationEvent<HTMLDivElement>) => {
-    // Only invoke removal when the container itself finishes the exit animation
     if (e.target === e.currentTarget && toast.exiting) {
       onRemove();
     }
@@ -678,7 +667,7 @@ function ToastElement({
           onDismiss();
         }
       }}
-      className={`pointer-events-auto relative overflow-hidden flex items-start gap-3 w-full p-4 rounded-[var(--radius-lg,0.625rem)] border shadow-xl dark:shadow-2xl dark:shadow-black/70 dark:ring-1 dark:ring-white/10 backdrop-blur-md will-change-transform outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary ${
+      className={`pointer-events-auto relative overflow-hidden flex items-start gap-3 w-full p-4 rounded-[var(--radius-lg,0.625rem)] border shadow-xl will-change-transform outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-ring ${
         !userHasBg ? defaultStyle.bg : ""
       } ${!userHasBorder ? defaultStyle.border : ""} ${toast.className || ""}`}
     >
@@ -735,7 +724,7 @@ function ToastElement({
             <div className="overflow-hidden">
               <div
                 className={`leading-relaxed text-xs pt-1 opacity-0 font-normal ${
-                  !userHasText ? defaultStyle.description : "opacity-90"
+                  !userHasText ? defaultStyle.description : ""
                 }`}
                 style={{
                   animation: "toast-fade-in 200ms ease-out 200ms forwards",
@@ -755,7 +744,7 @@ function ToastElement({
         type="button"
         onClick={onDismiss}
         aria-label="Close toast"
-        className="p-1 rounded-md opacity-70 hover:opacity-100 hover:bg-neutral-500/15 dark:hover:bg-white/10 transition-colors text-inherit"
+        className="p-1 rounded-md opacity-70 hover:opacity-100 hover:bg-muted transition-colors text-inherit"
       >
         <X className="w-4 h-4" />
       </button>
