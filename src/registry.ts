@@ -51,4 +51,19 @@ export const REGISTRY: Record<string, ComponentMeta> = {
       },
     ],
   },
+  input: {
+    name: "Input",
+    dependencies: [
+      "class-variance-authority",
+      "clsx",
+      "tailwind-merge",
+      "lucide-react",
+    ],
+    files: [
+      {
+        targetName: "input.tsx",
+        templatePath: "input/input.tsx",
+      },
+    ],
+  },
 };
