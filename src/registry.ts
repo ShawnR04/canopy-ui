@@ -37,4 +37,18 @@ export const REGISTRY: Record<string, ComponentMeta> = {
       },
     ],
   },
+  badge: {
+    name: "Badge",
+    dependencies: [
+      "class-variance-authority", 
+      "clsx", 
+      "tailwind-merge"
+    ],
+    files: [
+      {
+        targetName: "badge.tsx",
+        templatePath: "badge/badge.tsx",
+      },
+    ],
+  },
 };
